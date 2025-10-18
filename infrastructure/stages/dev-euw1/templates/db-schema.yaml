@@ -1,0 +1,12 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: db-atlas-schema
+data:
+  schema.sql: |
+    CREATE TABLE bookings (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      date TEXT,
+      service TEXT,
+      customer TEXT
+    );

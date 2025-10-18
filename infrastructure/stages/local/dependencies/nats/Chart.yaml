@@ -1,0 +1,9 @@
+apiVersion: v2
+name: nats
+description: NATS for Drive
+version: 0.0.1
+dependencies:
+  - repository: oci://891377205362.dkr.ecr.eu-west-1.amazonaws.com/drive/charts
+    name: nats
+    alias: nats
+    version: 0.9.0

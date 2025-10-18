@@ -1,0 +1,32 @@
+version: 2
+
+registries:
+  github-wirelesscar-wdp:
+    type: git
+    url: https://github.com
+    username: x-access-token
+    password: 
+
+updates:
+  - package-ecosystem: gomod
+    directory: "/apps/myapp"
+    registries: "*"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+    open-pull-requests-limit: 10
+    groups:
+      go-dependencies:
+        patterns:
+          - "*"
+
+  - package-ecosystem: docker
+    directory: "/apps/myapp"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+    open-pull-requests-limit: 10

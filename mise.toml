@@ -1,0 +1,7 @@
+[env]
+DRV_SYSTEM = "mcp-atlassian"
+DRV_VERTICAL_ID = "d1db59e"
+PRELOAD_IMAGES = "postgres:17.5" # List of images to preload, CSV (string)
+
+[tools]
+go = "latest"

@@ -1,0 +1,82 @@
+drive:
+  stageName: local
+  systemName: mcp-atlassian
+  verticalId: d1db59e
+
+  db:
+    enabled: true
+    instances: 1
+    storageSize: 1Gi
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "250m"
+    atlas:
+      enabled: true
+      configMap: db-atlas-schema
+
+  nats:
+    enabled: true
+
+  otel:
+    enabled: false
+
+  secrets:
+    []
+    # - supersecret
+
+  apps:
+    myapp:
+      tag: latest
+      profile: go
+
+      # autoscaling:
+      #   minReplicas: 1
+      #   maxReplicas: 3
+      #   targetCpuPercent: 70
+
+      # Either use autoscaling OR replicaCount
+      replicaCount: 1
+
+      # # Can't use gateway locally
+      # httpGateway:
+      #   public: false
+
+      db: true
+      nats:
+        enabled: true
+
+      # Environment variables can be added as well as secrets
+      env:
+        CUSTOM_ENV_VAR1: "value1"
+      # secretEnv:
+      #   SECRET_ENV_VAR1:
+      #     secretName: supersecret
+      #     secretKey: secret-key-1
+      #
+      # # Resources can be overridden by per app
+      # resources:
+      #   requests:
+      #     cpu: "50m"
+      #     memory: "64Mi"
+      #   limits:
+      #     cpu: "200m"
+      #     memory: "128Mi"
+
+      # Specify probes and which endpoints are used
+      probes:
+        liveness: /healthz
+        readiness: /readyz
+
+  # Set the defaults for all apps within a service
+  appDefaults:
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "64Mi"
+      limits:
+        cpu: "200m"
+        memory: "128Mi"

@@ -1,0 +1,15 @@
+meta {
+  name: Tick!
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseURL}}/tick
+  body: json
+  auth: none
+}
+
+vars:post-response {
+  id: id
+}

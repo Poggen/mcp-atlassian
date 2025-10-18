@@ -1,0 +1,22 @@
+v1alpha1:
+  team: U-GitHub-WDP-EarlyBirds
+  apps:
+    - myapp
+
+  driveInfra:
+    majorVersion: 1
+    enabled: true
+
+  stages:
+    dev-euw1:
+      autoPromotion: true
+      # verify: true
+      region: eu
+    stg-euw1:
+      # verify: false
+      dependsOn: dev-euw1
+      region: eu
+    prd-euw1:
+      # verify: false
+      dependsOn: stg-euw1
+      region: eu

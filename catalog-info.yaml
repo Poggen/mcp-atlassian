@@ -1,0 +1,35 @@
+# https://backstage.io/docs/features/software-catalog/descriptor-format#kind-template
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: mcp-atlassian
+  namespace: wdp-earlybirds
+  tags:
+    - go
+  labels:
+    template-name: drive-go
+    template-version: v3.1.8
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+    github.com/project-slug: WDP-EarlyBirds/mcp-atlassian
+    backstage.io/environment-urls: |
+      {
+        "Development": "https://mcp-atlassian.gated.dev-euw1.d1db59e.drive-platform.com",
+        "Staging": "https://mcp-atlassian.gated.stg-euw1.d1db59e.drive-platform.com",
+        "Production": "https://mcp-atlassian.gated.prd-euw1.d1db59e.drive-platform.com"
+      }
+    drive.wirelesscar.com/delete-after: disabled
+  links:
+    - url: https://argocd.gated.euw1.d1db59e.drive-platform.com/applications?search=mcp-atlassian
+      title: ArgoCD
+    - url: https://kargo.gated.euw1.d1db59e.drive-platform.com/project/mcp-atlassian
+      title: Kargo
+    - url: https://grafana.gated.euw1.d1db59e.drive-platform.com/d/service-overview/service-overview?orgId=1&var-app=mcp-atlassian.myapp
+      title: Grafana
+    - url: https://github.com/WDP-EarlyBirds/mcp-atlassian/releases
+      title: Release Notes
+
+spec:
+  type: service
+  owner: group:WDP-EarlyBirds/U-GitHub-WDP-EarlyBirds
+  lifecycle: experimental

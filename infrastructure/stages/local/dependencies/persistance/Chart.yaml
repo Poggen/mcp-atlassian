@@ -1,0 +1,10 @@
+apiVersion: v2
+name: persistence
+description: Persistence for Drive
+version: 0.2.0
+
+dependencies:
+  - repository: oci://891377205362.dkr.ecr.eu-west-1.amazonaws.com/drive/charts
+    name: cluster-persistence
+    alias: persistence
+    version: 0.2.2

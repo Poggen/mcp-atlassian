@@ -1,0 +1,15 @@
+meta {
+  name: Delete booking by Id
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseURL}}/bookings/{{bookingid}}
+  body: none
+  auth: none
+}
+
+vars:pre-request {
+  bookingid: c7396255-8002-4a2c-b654-3ad7d795d6f5
+}
