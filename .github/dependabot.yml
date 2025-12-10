@@ -1,16 +1,8 @@
 version: 2
 
-registries:
-  github-wirelesscar-wdp:
-    type: git
-    url: https://github.com
-    username: x-access-token
-    password: 
-
 updates:
-  - package-ecosystem: gomod
-    directory: "/apps/myapp"
-    registries: "*"
+  - package-ecosystem: uv
+    directory: "/apps/mcp-atlassian"
     schedule:
       interval: weekly
     commit-message:
@@ -18,12 +10,12 @@ updates:
       include: scope
     open-pull-requests-limit: 10
     groups:
-      go-dependencies:
+      npm-dependencies:
         patterns:
           - "*"
 
   - package-ecosystem: docker
-    directory: "/apps/myapp"
+    directory: "/apps/mcp-atlassian"
     schedule:
       interval: weekly
     commit-message:

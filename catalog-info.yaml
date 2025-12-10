@@ -4,11 +4,6 @@ kind: Component
 metadata:
   name: mcp-atlassian
   namespace: wdp-earlybirds
-  tags:
-    - go
-  labels:
-    template-name: drive-go
-    template-version: v3.1.8
   annotations:
     backstage.io/techdocs-ref: dir:.
     github.com/project-slug: WDP-EarlyBirds/mcp-atlassian

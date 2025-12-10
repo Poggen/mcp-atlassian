@@ -11,5 +11,5 @@ permissions:
 
 jobs:
   publish-updated-apps:
-    uses: WirelessCar-WDP/drive-actions/.github/workflows/publish-go-apps.yaml@v2.12.0
+    uses: WirelessCar-WDP/drive-actions/.github/workflows/publish-generic-apps.yaml@v2.27.0
     secrets: inherit
