@@ -12,5 +12,11 @@ class AtlassianFastMCP(FastMCP):
         kwargs["exclude_args"] = list(exclude)
         return super().tool(*args, **kwargs)
 
+    def mount(self, path: str, app: "FastMCP"):
+        """Ensure mounted apps also exclude ctx by wrapping their tools."""
+        for name, tool in app.tools.items():
+            tool.exclude_args = list(set(tool.exclude_args or []) | {"ctx"})
+        return super().mount(path, app)
+
 
 __all__ = ["AtlassianFastMCP"]
