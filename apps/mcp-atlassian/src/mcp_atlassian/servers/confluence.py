@@ -23,7 +23,7 @@ confluence_mcp = AtlassianFastMCP(
 
 @confluence_mcp.tool(tags={"confluence", "read"})
 async def search(
-    ctx: Context,
+    ctx: Context | None = None,
     query: Annotated[
         str,
         Field(
@@ -112,7 +112,7 @@ async def search(
 
 @confluence_mcp.tool(tags={"confluence", "read"})
 async def get_page(
-    ctx: Context,
+    ctx: Context | None = None,
     page_id: Annotated[
         str | None,
         Field(
@@ -228,7 +228,7 @@ async def get_page(
 
 @confluence_mcp.tool(tags={"confluence", "read"})
 async def get_page_children(
-    ctx: Context,
+    ctx: Context | None = None,
     parent_id: Annotated[
         str,
         Field(
@@ -316,7 +316,7 @@ async def get_page_children(
 
 @confluence_mcp.tool(tags={"confluence", "read"})
 async def get_comments(
-    ctx: Context,
+    ctx: Context | None = None,
     page_id: Annotated[
         str,
         Field(
@@ -345,7 +345,7 @@ async def get_comments(
 
 @confluence_mcp.tool(tags={"confluence", "read"})
 async def get_labels(
-    ctx: Context,
+    ctx: Context | None = None,
     page_id: Annotated[
         str,
         Field(
@@ -375,7 +375,7 @@ async def get_labels(
 @confluence_mcp.tool(tags={"confluence", "write"})
 @check_write_access
 async def add_label(
-    ctx: Context,
+    ctx: Context | None = None,
     page_id: Annotated[str, Field(description="The ID of the page to update")],
     name: Annotated[str, Field(description="The name of the label")],
 ) -> str:
@@ -401,7 +401,7 @@ async def add_label(
 @confluence_mcp.tool(tags={"confluence", "write"})
 @check_write_access
 async def create_page(
-    ctx: Context,
+    ctx: Context | None = None,
     space_key: Annotated[
         str,
         Field(
@@ -493,7 +493,7 @@ async def create_page(
 @confluence_mcp.tool(tags={"confluence", "write"})
 @check_write_access
 async def update_page(
-    ctx: Context,
+    ctx: Context | None = None,
     page_id: Annotated[str, Field(description="The ID of the page to update")],
     title: Annotated[str, Field(description="The new title of the page")],
     content: Annotated[
@@ -587,7 +587,7 @@ async def update_page(
 @confluence_mcp.tool(tags={"confluence", "write"})
 @check_write_access
 async def delete_page(
-    ctx: Context,
+    ctx: Context | None = None,
     page_id: Annotated[str, Field(description="The ID of the page to delete")],
 ) -> str:
     """Delete an existing Confluence page.
@@ -629,7 +629,7 @@ async def delete_page(
 @confluence_mcp.tool(tags={"confluence", "write"})
 @check_write_access
 async def add_comment(
-    ctx: Context,
+    ctx: Context | None = None,
     page_id: Annotated[
         str, Field(description="The ID of the page to add a comment to")
     ],
@@ -678,7 +678,7 @@ async def add_comment(
 
 @confluence_mcp.tool(tags={"confluence", "read"})
 async def search_user(
-    ctx: Context,
+    ctx: Context | None = None,
     query: Annotated[
         str,
         Field(
