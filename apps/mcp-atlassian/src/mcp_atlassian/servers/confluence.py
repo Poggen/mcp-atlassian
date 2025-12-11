@@ -4,10 +4,11 @@ import json
 import logging
 from typing import Annotated
 
-from fastmcp import Context, FastMCP
+from fastmcp import Context
 from pydantic import BeforeValidator, Field
 
 from mcp_atlassian.exceptions import MCPAtlassianAuthenticationError
+from mcp_atlassian.servers.base import AtlassianFastMCP
 from mcp_atlassian.servers.dependencies import get_confluence_fetcher
 from mcp_atlassian.utils.decorators import (
     check_write_access,
@@ -15,7 +16,7 @@ from mcp_atlassian.utils.decorators import (
 
 logger = logging.getLogger(__name__)
 
-confluence_mcp = FastMCP(
+confluence_mcp = AtlassianFastMCP(
     name="Confluence MCP Service",
 )
 
