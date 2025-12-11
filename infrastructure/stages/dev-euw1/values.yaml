@@ -41,15 +41,17 @@ drive:
         enabled: true
         permissions:
           pub:
-            - "$KV.>"
-            - "$kv.>"
-            - "$JS.API.>"
-            - "_INBOX.>"
+            allow:
+              - "$KV.>"
+              - "$kv.>"
+              - "$JS.API.>"
+              - "_INBOX.>"
           sub:
-            - "$KV.>"
-            - "$kv.>"
-            - "$JS.API.>"
-            - "_INBOX.>"
+            allow:
+              - "$KV.>"
+              - "$kv.>"
+              - "$JS.API.>"
+              - "_INBOX.>"
 
       env:
         TRANSPORT: streamable-http
