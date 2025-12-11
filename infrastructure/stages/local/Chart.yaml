@@ -7,4 +7,4 @@ dependencies:
   - repository: oci://891377205362.dkr.ecr.eu-west-1.amazonaws.com/drive/charts
     name: drive-service-infra
     alias: drive
-    version: 1.5.2
+    version: 1.10.2

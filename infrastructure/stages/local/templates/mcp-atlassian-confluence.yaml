@@ -1,0 +1,113 @@
+# Least hacky way I could find for running second copy of apps/mcp-atlassian
+
+{{- /* Custom Confluence pod copied from drive-service-infra templates, adjusted for name/path/env */ -}}
+{{- $appName := "mcp-atlassian-confluence" -}}
+{{- $imageAppDetails := index .Values.drive.apps "mcp-atlassian" -}}
+{{- $appDetails := dict "tag" $imageAppDetails.tag "replicaCount" 1 "env" .Values.drive.confluence.env "secretEnv" (default (dict) .Values.drive.confluence.secretEnv) -}}
+--- 
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $appName }}
+  labels:
+    {{- include "drive-service-infra.appLabels" (dict "appName" $appName "appDetails" $appDetails "context" .) | nindent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  name: {{ $appName }}
+  labels:
+    {{- include "drive-service-infra.appLabels" (dict "appName" $appName "appDetails" $appDetails "context" .) | nindent 4 }}
+spec:
+  replicas: {{ $appDetails.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "drive-service-infra.appSelectorLabels" (dict "appName" $appName "context" .) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "drive-service-infra.appLabels" (dict "appName" $appName "appDetails" $appDetails "context" .) | nindent 8 }}
+    spec:
+      serviceAccountName: {{ $appName }}
+      volumes:
+        - name: nats-user-creds
+          secret:
+            secretName: {{ $appName }}-nats-user-creds
+            optional: false
+      containers:
+        - name: main
+          imagePullPolicy: IfNotPresent
+          image: "{{ .Values.drive.image.registry }}/{{ .Values.drive.verticalId }}/{{ .Values.drive.systemName }}/images/mcp-atlassian:{{ $imageAppDetails.tag }}"
+          env:
+            - name: ENVIRONMENT
+              value: {{ .Values.drive.stageName }}
+            - name: OTEL_SERVICE_NAME
+              value: "{{ .Values.drive.systemName }}.{{ $appName }}"
+            - name: OTEL_EXPORTER_OTLP_INSECURE
+              value: "true"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-in-cluster-collector.monitoring.svc.cluster.local:4318"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "service.namespace={{ .Values.drive.systemName }}-{{ .Values.drive.stageName }},service.stage={{ .Values.drive.stageName }}"
+            - name: OTEL_LOGS_EXPORTER
+              value: "none"
+            - name: OTEL_METRICS_EXPORTER
+              value: "none"
+            - name: OTEL_TRACES_EXPORTER
+              value: "none"
+            - name: NATS_URL
+              value: "nats://nats.nats.svc.cluster.local:4222"
+            {{- range $key, $value := $appDetails.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- range $key, $value := (default (dict) $appDetails.secretEnv) }}
+            - name: {{ $key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $value.secretName }}
+                  key: {{ $value.secretKey }}
+            {{- end }}
+          ports:
+            - containerPort: 3000
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 3000
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3000
+          securityContext:
+            runAsUser: 65532
+            runAsGroup: 65532
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          resources:
+            {{- toYaml .Values.drive.appDefaults.resources | nindent 12 }}
+          volumeMounts:
+            - mountPath: "/var/run/secrets/nats"
+              name: nats-user-creds
+      securityContext:
+        runAsNonRoot: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $appName }}
+  labels:
+    {{- include "drive-service-infra.appLabels" (dict "appName" $appName "appDetails" $appDetails "context" .) | nindent 4 }}
+spec:
+  selector:
+    {{- include "drive-service-infra.appSelectorLabels" (dict "appName" $appName "context" .) | nindent 4 }}
+  ports:
+    - port: 80
+      targetPort: 3000
+      name: http

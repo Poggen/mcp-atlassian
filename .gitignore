@@ -45,3 +45,5 @@ pkg/
 
 # Mise
 !.mise-tasks/**/build
+
+apply-secrets.sh

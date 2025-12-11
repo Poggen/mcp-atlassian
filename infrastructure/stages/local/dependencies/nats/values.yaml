@@ -1,9 +1,6 @@
 nats:
   local:
     nauth:
-      operator:
-        labels:
-          operator.nats.drive-platform.com/id: OBVRYCVZ3FVFM3HN3UBNF3ITTHLEZUY7JNZIDRIJYMCW5JVNE33XA3HL
       backup:
         enabled: false
         preload: false
@@ -27,6 +24,9 @@ nats:
       enabled: false
       podMonitor:
         enabled: false
+
+    natsBox:
+      enabled: false
 
   nauth:
     backup:

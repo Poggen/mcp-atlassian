@@ -17,6 +17,12 @@
 - Follow links until you understand the domain; honor any `Read when` hints.
 - Keep notes brief; update docs whenever behavior or APIs change—no feature ships without matching docs.
 
+### Docs (Drive—WirelessCar IDP with K8S and GitOps)
+- Repos sit side-by-side; use relative paths from this repo: `../drive/docs` (platform docs), `../drv` (DRV CLI), `../drive-service-charts` (helm charts: nats/postgres/otel/etc.).
+- At session start, name the key files you’ll keep in view (e.g., `../drive/docs/index.md`, `../drive/docs/quickstart/index.md`, `../drive/docs/user-guide/messaging/index.md`, relevant `architecture/*`, `troubleshooting/*`, chart values you touch).
+- When unsure, search docs first: `rg -n "<term>" ../drive/docs ../drv ../drive-service-charts -g"*.md"` and open matches with `bat`/`less`; keep them open until the topic is resolved.
+- Prefer citing relative paths in answers; if behavior changes, re-scan and note whether the doc already covers it or needs an update.
+
 ## PR Feedback
 - Find the active PR: `gh pr view --json number,title,url --jq '"PR #\\(.number): \\(.title)\\n\\(.url)"'`.
 - If asked for PR comments, fetch both top-level and inline via `gh pr view …` and `gh api repos/:owner/:repo/pulls/<num>/comments --paginate`.
@@ -39,8 +45,7 @@
 - Multi-agent etiquette: scan `git status/diff` before editing; if someone else is mid-change, coordinate before touching shared files; ship small, reviewable commits.
 
 ## Language/Stack Notes
-- X
-- Y
+- See instructions under apps/*/AGENTS.md
 
 ## Critical Thinking
 - Chase root cause, not band-aids—trace upstream and fix the real break.
@@ -49,6 +54,12 @@
 - Write down findings in the task thread so others can follow the reasoning.
 
 ## Tools
+
+### mise (mise-en-place)
+- Always use the platform provided mise tasks (`mise tasks ls`), run this command at startup and always prefer using them over custom `helm` or `kubectl` commands, if possible
+
+### drv (Drive Platform cli)
+- Used to authenticate with the chart registry, upload secrets, keep platform tooling up to date, and more.
 
 ### gh
 - GitHub CLI for PRs, CI logs, releases, and repo queries; run `gh help`. When someone shares a GitHub issue/PR URL (full or relative like `/pull/5`), use `gh` to read it—do not web-search. Examples: `gh issue view <url> --comments -R owner/repo` and `gh pr view <url> --comments --files -R owner/repo`. If only a number is given, derive the repo from the URL or current checkout and still fetch details via `gh`.

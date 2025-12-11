@@ -1,6 +1,0 @@
-persistence:
-  atlas:
-    fullnameOverride: atlas-operator
-  cloudnative-pg:
-    nameOverride: cloudnative-pg
-    fullnameOverride: cloudnative-pg

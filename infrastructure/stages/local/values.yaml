@@ -4,74 +4,73 @@ drive:
   verticalId: d1db59e
 
   db:
-    enabled: true
-    instances: 1
-    storageSize: 1Gi
-    resources:
-      requests:
-        memory: "128Mi"
-        cpu: "100m"
-      limits:
-        memory: "256Mi"
-        cpu: "250m"
-    atlas:
-      enabled: true
-      configMap: db-atlas-schema
+    enabled: false
 
   nats:
     enabled: true
+    jetstream:
+      enabled: true
+      streams:
+        mcp-client-store:
+          size: S
+          criticality: medium
+          config:
+            subjects:
+              - "mcp.client.>"
+    limits:
+      jetStreamLimits:
+        maxBytesRequired: false
 
   otel:
     enabled: false
 
-  secrets:
-    []
-    # - supersecret
+  secrets: []
 
   apps:
-    myapp:
+    mcp-atlassian:
       tag: latest
-      profile: go
-
-      # autoscaling:
-      #   minReplicas: 1
-      #   maxReplicas: 3
-      #   targetCpuPercent: 70
-
-      # Either use autoscaling OR replicaCount
       replicaCount: 1
-
-      # # Can't use gateway locally
-      # httpGateway:
-      #   public: false
-
-      db: true
+      profile: generic
+      db: false
       nats:
         enabled: true
-
-      # Environment variables can be added as well as secrets
+        permissions:
+          pub:
+            - "$KV.>"
+            - "$kv.>"
+            - "$JS.API.>"
+            - "_INBOX.>"
+            - "mcp.client.>"
+          sub:
+            - "$KV.>"
+            - "$kv.>"
+            - "$JS.API.>"
+            - "_INBOX.>"
+            - "mcp.client.>"
       env:
-        CUSTOM_ENV_VAR1: "value1"
-      # secretEnv:
-      #   SECRET_ENV_VAR1:
-      #     secretName: supersecret
-      #     secretKey: secret-key-1
-      #
-      # # Resources can be overridden by per app
-      # resources:
-      #   requests:
-      #     cpu: "50m"
-      #     memory: "64Mi"
-      #   limits:
-      #     cpu: "200m"
-      #     memory: "128Mi"
-
-      # Specify probes and which endpoints are used
+        TRANSPORT: streamable-http
+        PORT: "3000"
+        HOST: 0.0.0.0
+        MCP_PATH: /mcp
+        MCP_LOGGING_STDOUT: "true"
+        READ_ONLY_MODE: "true"
+        JIRA_URL: "https://wcar-jira-test.riada.se"
+        STORAGE_BACKEND: jetstream
+        STORAGE_BUCKET_PREFIX: mcp-client-
+        STORAGE_DEFAULT_COLLECTION: registrations
+        JWT_SIGNING_KEY: "dev-jwt-signing-key-change-me"
+        STORAGE_ENCRYPTION_KEY: "f8XkS6zWIZ2shB_QhSiaY9hjiawR1C0tqJg8PJo3lqA="
+        ATLASSIAN_OAUTH_CLIENT_ID: "CHANGE_ME"
+        ATLASSIAN_OAUTH_CLIENT_SECRET: "CHANGE_ME"
+        ATLASSIAN_OAUTH_SCOPE: "READ"
+        ATLASSIAN_OAUTH_INSTANCE_TYPE: "datacenter"
+        ATLASSIAN_OAUTH_INSTANCE_URL: "https://wcar-jira-test.riada.se"
+        ATLASSIAN_OAUTH_REDIRECT_URI: "http://localhost:3000/callback"
+        ATLASSIAN_OAUTH_ENABLE: "true"
       probes:
         liveness: /healthz
-        readiness: /readyz
+        readiness: /healthz
 
-  # Set the defaults for all apps within a service
   appDefaults:
     resources:
       requests:
@@ -80,3 +79,28 @@ drive:
       limits:
         cpu: "200m"
         memory: "128Mi"
+
+  confluence:
+    env:
+      TRANSPORT: streamable-http
+      PORT: "3000"
+      HOST: 0.0.0.0
+      MCP_PATH: /mcp
+      MCP_LOGGING_STDOUT: "true"
+      READ_ONLY_MODE: "true"
+      CONFLUENCE_URL: "https://wcar-confluence-test.riada.se"
+      STORAGE_BACKEND: jetstream
+      STORAGE_BUCKET_PREFIX: mcp-confluence-client3-
+      STORAGE_DEFAULT_COLLECTION: registrations
+      JWT_SIGNING_KEY: "dev-jwt-signing-key-change-me"
+      STORAGE_ENCRYPTION_KEY: "f8XkS6zWIZ2shB_QhSiaY9hjiawR1C0tqJg8PJo3lqA="
+      ATLASSIAN_OAUTH_CLIENT_ID: "CHANGE_ME"
+      ATLASSIAN_OAUTH_CLIENT_SECRET: "CHANGE_ME"
+      ATLASSIAN_OAUTH_SCOPE: "READ"
+      ATLASSIAN_OAUTH_INSTANCE_TYPE: "datacenter"
+      ATLASSIAN_OAUTH_INSTANCE_URL: "https://wcar-confluence-test.riada.se"
+      ATLASSIAN_OAUTH_REDIRECT_URI: "http://localhost:3000/callback"
+      ATLASSIAN_OAUTH_ENABLE: "true"
+    probes:
+      liveness: /healthz
+      readiness: /healthz
