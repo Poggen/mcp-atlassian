@@ -24,7 +24,9 @@ drive:
   otel:
     enabled: false
 
-  secrets: []
+  secrets:
+    - mcp-atlassian-storage
+    - mcp-atlassian-oauth
 
   apps:
     mcp-atlassian:
