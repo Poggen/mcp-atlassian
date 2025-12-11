@@ -64,6 +64,11 @@ class UsersMixin(ConfluenceClient):
         try:
             user_data = self.confluence.get("rest/api/user/current")
             if not isinstance(user_data, dict):
+                if not self.config.is_cloud:
+                    logger.warning(
+                        "Confluence DC /rest/api/user/current returned non-dict (%s); continuing without user profile", type(user_data)
+                    )
+                    return {"raw": str(user_data)[:500]}
                 logger.error(
                     f"Confluence /rest/api/user/current endpoint returned non-dict data type: {type(user_data)}. "
                     f"Response text (partial): {str(user_data)[:500]}"
@@ -77,6 +82,12 @@ class UsersMixin(ConfluenceClient):
                 401,
                 403,
             ]:
+                if not self.config.is_cloud:
+                    logger.warning(
+                        "Confluence DC token validation got %s for /rest/api/user/current; continuing without user info",
+                        http_err.response.status_code,
+                    )
+                    return {"status": http_err.response.status_code}
                 logger.warning(
                     f"Confluence token validation failed with HTTP {http_err.response.status_code} for /rest/api/user/current."
                 )

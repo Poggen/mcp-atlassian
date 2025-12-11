@@ -2,7 +2,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mcp_atlassian.utils.decorators import check_write_access
+from mcp_atlassian.utils.decorators import ensure_write_access
 
 
 class DummyContext:
@@ -13,24 +13,13 @@ class DummyContext:
         }
 
 
-@pytest.mark.asyncio
-async def test_check_write_access_blocks_in_read_only():
-    @check_write_access
-    async def dummy_tool(ctx, x):
-        return x * 2
-
+def test_ensure_write_access_blocks_in_read_only():
     ctx = DummyContext(read_only=True)
     with pytest.raises(ValueError) as exc:
-        await dummy_tool(ctx, 3)
+        ensure_write_access(ctx)
     assert "read-only mode" in str(exc.value)
 
 
-@pytest.mark.asyncio
-async def test_check_write_access_allows_in_writable():
-    @check_write_access
-    async def dummy_tool(ctx, x):
-        return x * 2
-
+def test_ensure_write_access_allows_in_writable():
     ctx = DummyContext(read_only=False)
-    result = await dummy_tool(ctx, 4)
-    assert result == 8
+    ensure_write_access(ctx)

@@ -10,9 +10,7 @@ from pydantic import BeforeValidator, Field
 from mcp_atlassian.exceptions import MCPAtlassianAuthenticationError
 from mcp_atlassian.servers.base import AtlassianFastMCP
 from mcp_atlassian.servers.dependencies import get_confluence_fetcher
-from mcp_atlassian.utils.decorators import (
-    check_write_access,
-)
+from mcp_atlassian.utils.decorators import ensure_write_access
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +21,6 @@ confluence_mcp = AtlassianFastMCP(
 
 @confluence_mcp.tool(tags={"confluence", "read"})
 async def search(
-    ctx: Context,
     query: Annotated[
         str,
         Field(
@@ -69,6 +66,8 @@ async def search(
             default=None,
         ),
     ] = None,
+    *,
+    ctx: Context | None = None,
 ) -> str:
     """Search Confluence content using simple terms or CQL.
 
@@ -112,7 +111,6 @@ async def search(
 
 @confluence_mcp.tool(tags={"confluence", "read"})
 async def get_page(
-    ctx: Context,
     page_id: Annotated[
         str | None,
         Field(
@@ -161,6 +159,8 @@ async def get_page(
             default=True,
         ),
     ] = True,
+    *,
+    ctx: Context | None = None,
 ) -> str:
     """Get content of a specific Confluence page by its ID, or by its title and space key.
 
@@ -228,7 +228,6 @@ async def get_page(
 
 @confluence_mcp.tool(tags={"confluence", "read"})
 async def get_page_children(
-    ctx: Context,
     parent_id: Annotated[
         str,
         Field(
@@ -269,6 +268,8 @@ async def get_page_children(
         int,
         Field(description="Starting index for pagination (0-based)", default=0, ge=0),
     ] = 0,
+    *,
+    ctx: Context | None = None,
 ) -> str:
     """Get child pages of a specific Confluence page.
 
@@ -316,7 +317,6 @@ async def get_page_children(
 
 @confluence_mcp.tool(tags={"confluence", "read"})
 async def get_comments(
-    ctx: Context,
     page_id: Annotated[
         str,
         Field(
@@ -327,6 +327,8 @@ async def get_comments(
             )
         ),
     ],
+    *,
+    ctx: Context | None = None,
 ) -> str:
     """Get comments for a specific Confluence page.
 
@@ -345,7 +347,6 @@ async def get_comments(
 
 @confluence_mcp.tool(tags={"confluence", "read"})
 async def get_labels(
-    ctx: Context,
     page_id: Annotated[
         str,
         Field(
@@ -356,6 +357,8 @@ async def get_labels(
             )
         ),
     ],
+    *,
+    ctx: Context | None = None,
 ) -> str:
     """Get labels for a specific Confluence page.
 
@@ -373,11 +376,11 @@ async def get_labels(
 
 
 @confluence_mcp.tool(tags={"confluence", "write"})
-@check_write_access
 async def add_label(
-    ctx: Context,
     page_id: Annotated[str, Field(description="The ID of the page to update")],
     name: Annotated[str, Field(description="The name of the label")],
+    *,
+    ctx: Context | None = None,
 ) -> str:
     """Add label to an existing Confluence page.
 
@@ -392,6 +395,7 @@ async def add_label(
     Raises:
         ValueError: If in read-only mode or Confluence client is unavailable.
     """
+    ensure_write_access(ctx)
     confluence_fetcher = await get_confluence_fetcher(ctx)
     labels = confluence_fetcher.add_page_label(page_id, name)
     formatted_labels = [label.to_simplified_dict() for label in labels]
@@ -399,9 +403,7 @@ async def add_label(
 
 
 @confluence_mcp.tool(tags={"confluence", "write"})
-@check_write_access
 async def create_page(
-    ctx: Context,
     space_key: Annotated[
         str,
         Field(
@@ -437,6 +439,8 @@ async def create_page(
             default=False,
         ),
     ] = False,
+    *,
+    ctx: Context | None = None,
 ) -> str:
     """Create a new Confluence page.
 
@@ -455,6 +459,7 @@ async def create_page(
     Raises:
         ValueError: If in read-only mode, Confluence client is unavailable, or invalid content_format.
     """
+    ensure_write_access(ctx)
     confluence_fetcher = await get_confluence_fetcher(ctx)
 
     # Validate content_format
@@ -491,9 +496,7 @@ async def create_page(
 
 
 @confluence_mcp.tool(tags={"confluence", "write"})
-@check_write_access
 async def update_page(
-    ctx: Context,
     page_id: Annotated[str, Field(description="The ID of the page to update")],
     title: Annotated[str, Field(description="The new title of the page")],
     content: Annotated[
@@ -527,6 +530,8 @@ async def update_page(
             default=False,
         ),
     ] = False,
+    *,
+    ctx: Context | None = None,
 ) -> str:
     """Update an existing Confluence page.
 
@@ -547,6 +552,7 @@ async def update_page(
     Raises:
         ValueError: If Confluence client is not configured, available, or invalid content_format.
     """
+    ensure_write_access(ctx)
     confluence_fetcher = await get_confluence_fetcher(ctx)
 
     # Validate content_format
@@ -585,10 +591,10 @@ async def update_page(
 
 
 @confluence_mcp.tool(tags={"confluence", "write"})
-@check_write_access
 async def delete_page(
-    ctx: Context,
     page_id: Annotated[str, Field(description="The ID of the page to delete")],
+    *,
+    ctx: Context | None = None,
 ) -> str:
     """Delete an existing Confluence page.
 
@@ -602,6 +608,7 @@ async def delete_page(
     Raises:
         ValueError: If Confluence client is not configured or available.
     """
+    ensure_write_access(ctx)
     confluence_fetcher = await get_confluence_fetcher(ctx)
     try:
         result = confluence_fetcher.delete_page(page_id=page_id)
@@ -627,15 +634,15 @@ async def delete_page(
 
 
 @confluence_mcp.tool(tags={"confluence", "write"})
-@check_write_access
 async def add_comment(
-    ctx: Context,
     page_id: Annotated[
         str, Field(description="The ID of the page to add a comment to")
     ],
     content: Annotated[
         str, Field(description="The comment content in Markdown format")
     ],
+    *,
+    ctx: Context | None = None,
 ) -> str:
     """Add a comment to a Confluence page.
 
@@ -650,6 +657,7 @@ async def add_comment(
     Raises:
         ValueError: If in read-only mode or Confluence client is unavailable.
     """
+    ensure_write_access(ctx)
     confluence_fetcher = await get_confluence_fetcher(ctx)
     try:
         comment = confluence_fetcher.add_comment(page_id=page_id, content=content)
@@ -678,7 +686,6 @@ async def add_comment(
 
 @confluence_mcp.tool(tags={"confluence", "read"})
 async def search_user(
-    ctx: Context,
     query: Annotated[
         str,
         Field(
@@ -700,6 +707,8 @@ async def search_user(
             le=50,
         ),
     ] = 10,
+    *,
+    ctx: Context | None = None,
 ) -> str:
     """Search Confluence users using CQL.
 

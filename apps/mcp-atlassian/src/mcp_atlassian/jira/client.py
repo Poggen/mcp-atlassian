@@ -47,10 +47,6 @@ class JiraClient:
 
         # Initialize the Jira client based on auth type
         if self.config.auth_type == "oauth":
-            if not self.config.oauth_config or not self.config.oauth_config.cloud_id:
-                error_msg = "OAuth authentication requires a valid cloud_id"
-                raise ValueError(error_msg)
-
             # Create a session for OAuth
             session = Session()
 
@@ -59,16 +55,23 @@ class JiraClient:
                 error_msg = "Failed to configure OAuth session"
                 raise MCPAtlassianAuthenticationError(error_msg)
 
-            # The Jira API URL with OAuth is different
-            api_url = (
-                f"https://api.atlassian.com/ex/jira/{self.config.oauth_config.cloud_id}"
-            )
+            if self.config.is_cloud:
+                if not self.config.oauth_config or not self.config.oauth_config.cloud_id:
+                    error_msg = "OAuth authentication requires a valid cloud_id"
+                    raise ValueError(error_msg)
+                api_url = (
+                    f"https://api.atlassian.com/ex/jira/{self.config.oauth_config.cloud_id}"
+                )
+                cloud_flag = True
+            else:
+                # Data Center OAuth: hit the instance directly with bearer auth
+                api_url = self.config.url.rstrip("/")
+                cloud_flag = False
 
-            # Initialize Jira with the session
             self.jira = Jira(
                 url=api_url,
                 session=session,
-                cloud=True,  # OAuth is only for Cloud
+                cloud=cloud_flag,
                 verify_ssl=self.config.ssl_verify,
             )
         elif self.config.auth_type == "pat":

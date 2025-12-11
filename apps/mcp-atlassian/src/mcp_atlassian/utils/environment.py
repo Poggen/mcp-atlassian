@@ -16,15 +16,19 @@ def get_available_services() -> dict[str, bool | None]:
         is_cloud = is_atlassian_cloud_url(confluence_url)
 
         # OAuth check (highest precedence, applies to Cloud)
+        oauth_client_id = os.getenv("ATLASSIAN_OAUTH_CLIENT_ID")
+        oauth_client_secret = os.getenv("ATLASSIAN_OAUTH_CLIENT_SECRET")
+        oauth_redirect = os.getenv("ATLASSIAN_OAUTH_REDIRECT_URI")
+        oauth_scope = os.getenv("ATLASSIAN_OAUTH_SCOPE")
+        oauth_cloud_id = os.getenv("ATLASSIAN_OAUTH_CLOUD_ID")
+
         if all(
             [
-                os.getenv("ATLASSIAN_OAUTH_CLIENT_ID"),
-                os.getenv("ATLASSIAN_OAUTH_CLIENT_SECRET"),
-                os.getenv("ATLASSIAN_OAUTH_REDIRECT_URI"),
-                os.getenv("ATLASSIAN_OAUTH_SCOPE"),
-                os.getenv(
-                    "ATLASSIAN_OAUTH_CLOUD_ID"
-                ),  # CLOUD_ID is essential for OAuth client init
+                oauth_client_id,
+                oauth_client_secret,
+                oauth_redirect,
+                oauth_scope,
+                (oauth_cloud_id or not is_cloud),
             ]
         ):
             confluence_is_setup = True
@@ -34,7 +38,7 @@ def get_available_services() -> dict[str, bool | None]:
         elif all(
             [
                 os.getenv("ATLASSIAN_OAUTH_ACCESS_TOKEN"),
-                os.getenv("ATLASSIAN_OAUTH_CLOUD_ID"),
+                (oauth_cloud_id or not is_cloud),
             ]
         ):
             confluence_is_setup = True
@@ -71,13 +75,19 @@ def get_available_services() -> dict[str, bool | None]:
         is_cloud = is_atlassian_cloud_url(jira_url)
 
         # OAuth check (highest precedence, applies to Cloud)
+        oauth_client_id = os.getenv("ATLASSIAN_OAUTH_CLIENT_ID")
+        oauth_client_secret = os.getenv("ATLASSIAN_OAUTH_CLIENT_SECRET")
+        oauth_redirect = os.getenv("ATLASSIAN_OAUTH_REDIRECT_URI")
+        oauth_scope = os.getenv("ATLASSIAN_OAUTH_SCOPE")
+        oauth_cloud_id = os.getenv("ATLASSIAN_OAUTH_CLOUD_ID")
+
         if all(
             [
-                os.getenv("ATLASSIAN_OAUTH_CLIENT_ID"),
-                os.getenv("ATLASSIAN_OAUTH_CLIENT_SECRET"),
-                os.getenv("ATLASSIAN_OAUTH_REDIRECT_URI"),
-                os.getenv("ATLASSIAN_OAUTH_SCOPE"),
-                os.getenv("ATLASSIAN_OAUTH_CLOUD_ID"),
+                oauth_client_id,
+                oauth_client_secret,
+                oauth_redirect,
+                oauth_scope,
+                (oauth_cloud_id or not is_cloud),
             ]
         ):
             jira_is_setup = True
@@ -87,7 +97,7 @@ def get_available_services() -> dict[str, bool | None]:
         elif all(
             [
                 os.getenv("ATLASSIAN_OAUTH_ACCESS_TOKEN"),
-                os.getenv("ATLASSIAN_OAUTH_CLOUD_ID"),
+                (oauth_cloud_id or not is_cloud),
             ]
         ):
             jira_is_setup = True

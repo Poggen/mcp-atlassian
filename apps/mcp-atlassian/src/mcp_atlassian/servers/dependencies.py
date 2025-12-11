@@ -27,6 +27,44 @@ if TYPE_CHECKING:
 logger = logging.getLogger("mcp-atlassian.servers.dependencies")
 
 
+async def _maybe_swap_access_token(user_token: str, service: str) -> str:
+    """Swap a FastMCP-issued token for an upstream Atlassian access token.
+
+    When using FastMCP's OAuthProxy, clients authenticate to the MCP server with an
+    opaque token. Atlassian APIs require the real upstream access token.
+    """
+
+    try:
+        # Prefer the auth provider created at server startup so it has the same
+        # client_storage (JetStream) and token mappings.
+        from mcp_atlassian.servers.main import main_mcp  # type: ignore
+
+        auth_provider = getattr(main_mcp, "auth", None)
+        if not auth_provider:
+            # Fallback: build a fresh provider (may miss stored mappings)
+            from mcp_atlassian.servers.main import _build_auth_provider  # type: ignore
+
+            auth_provider = _build_auth_provider()
+
+        if not auth_provider:
+            return user_token
+
+        swapped = await auth_provider.load_access_token(user_token)
+        if swapped and swapped.token:
+            logger.debug("Swapped MCP token for upstream %s access token", service)
+            return swapped.token
+
+        logger.debug("Token swap returned no upstream token; using original token")
+        return user_token
+    except Exception as e:
+        logger.warning(
+            "Token swap for %s failed or unavailable; using original token (%s)",
+            service,
+            e,
+        )
+        return user_token
+
+
 def _create_user_config_for_fetcher(
     base_config: JiraConfig | ConfluenceConfig,
     auth_type: str,
@@ -86,9 +124,11 @@ def _create_user_config_for_fetcher(
             )
         global_oauth_cfg = base_config.oauth_config
 
-        # Use provided cloud_id or fall back to global config cloud_id
+        # Use provided cloud_id or fall back to global config cloud_id. Cloud ID is only
+        # required for Atlassian Cloud; for Data Center the OAuth flows work without it.
         effective_cloud_id = cloud_id if cloud_id else global_oauth_cfg.cloud_id
-        if not effective_cloud_id:
+        is_cloud_instance = getattr(base_config, "is_cloud", False)
+        if is_cloud_instance and not effective_cloud_id:
             raise ValueError(
                 "Cloud ID is required for OAuth authentication. "
                 "Provide it via X-Atlassian-Cloud-Id header or configure it globally."
@@ -195,6 +235,7 @@ async def get_jira_fetcher(ctx: Context) -> JiraFetcher:
                 raise ValueError("User Atlassian token found in state but is empty.")
             credentials = {"user_email_context": user_email}
             if user_auth_type == "oauth":
+                user_token = await _maybe_swap_access_token(user_token, "Jira")
                 credentials["oauth_access_token"] = user_token
             elif user_auth_type == "pat":
                 credentials["personal_access_token"] = user_token
@@ -302,6 +343,7 @@ async def get_confluence_fetcher(ctx: Context) -> ConfluenceFetcher:
                 raise ValueError("User Atlassian token found in state but is empty.")
             credentials = {"user_email_context": user_email}
             if user_auth_type == "oauth":
+                user_token = await _maybe_swap_access_token(user_token, "Confluence")
                 credentials["oauth_access_token"] = user_token
             elif user_auth_type == "pat":
                 credentials["personal_access_token"] = user_token

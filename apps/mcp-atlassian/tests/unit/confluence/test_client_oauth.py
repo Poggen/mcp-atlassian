@@ -75,6 +75,7 @@ class TestConfluenceClientOAuth:
             )
             assert "session" in conf_kwargs
             assert conf_kwargs["cloud"] is True
+            assert conf_kwargs.get("advanced_mode") is not True
 
             # Verify SSL verification was configured
             mock_configure_ssl.assert_called_once()
@@ -128,6 +129,7 @@ class TestConfluenceClientOAuth:
             )
             assert "session" in conf_kwargs
             assert conf_kwargs["cloud"] is True
+            assert conf_kwargs.get("advanced_mode") is not True
 
             # Verify SSL verification was configured
             mock_configure_ssl.assert_called_once()

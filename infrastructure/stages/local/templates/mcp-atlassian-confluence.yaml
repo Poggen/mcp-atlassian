@@ -1,10 +1,16 @@
-# Least hacky way I could find for running second copy of apps/mcp-atlassian
+# Custom Confluence deployment using the same image as mcp-atlassian
+# This mirrors drive-service-infra patterns but avoids the apps/<name> folder constraint.
 
-{{- /* Custom Confluence pod copied from drive-service-infra templates, adjusted for name/path/env */ -}}
 {{- $appName := "mcp-atlassian-confluence" -}}
 {{- $imageAppDetails := index .Values.drive.apps "mcp-atlassian" -}}
-{{- $appDetails := dict "tag" $imageAppDetails.tag "replicaCount" 1 "env" .Values.drive.confluence.env "secretEnv" (default (dict) .Values.drive.confluence.secretEnv) -}}
---- 
+{{- $confluenceVals := default (dict) .Values.drive.confluence -}}
+{{- $envMap := default (dict) $confluenceVals.env -}}
+{{- $secretEnvMap := default (dict) $confluenceVals.secretEnv -}}
+{{- $tag := default $imageAppDetails.tag $confluenceVals.tag -}}
+{{- $replicaCount := default 1 $confluenceVals.replicaCount -}}
+{{- $probes := default (dict) $confluenceVals.probes -}}
+{{- $appDetails := dict "tag" $tag "replicaCount" $replicaCount "env" $envMap "secretEnv" $secretEnvMap "probes" $probes }}
+---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -39,7 +45,7 @@ spec:
       containers:
         - name: main
           imagePullPolicy: IfNotPresent
-          image: "{{ .Values.drive.image.registry }}/{{ .Values.drive.verticalId }}/{{ .Values.drive.systemName }}/images/mcp-atlassian:{{ $imageAppDetails.tag }}"
+          image: "{{ .Values.drive.image.registry }}/{{ .Values.drive.verticalId }}/{{ .Values.drive.systemName }}/images/mcp-atlassian:{{ $tag }}"
           env:
             - name: ENVIRONMENT
               value: {{ .Values.drive.stageName }}
@@ -63,7 +69,7 @@ spec:
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
-            {{- range $key, $value := (default (dict) $appDetails.secretEnv) }}
+            {{- range $key, $value := $appDetails.secretEnv }}
             - name: {{ $key }}
               valueFrom:
                 secretKeyRef:
@@ -72,14 +78,21 @@ spec:
             {{- end }}
           ports:
             - containerPort: 3000
+          {{- if $appDetails.probes }}
+          {{- $probePort := default 3000 $appDetails.probes.port }}
+          {{- if $appDetails.probes.readiness }}
           readinessProbe:
             httpGet:
-              path: /healthz
-              port: 3000
+              path: {{ $appDetails.probes.readiness }}
+              port: {{ $probePort }}
+          {{- end }}
+          {{- if $appDetails.probes.liveness }}
           livenessProbe:
             httpGet:
-              path: /healthz
-              port: 3000
+              path: {{ $appDetails.probes.liveness }}
+              port: {{ $probePort }}
+          {{- end }}
+          {{- end }}
           securityContext:
             runAsUser: 65532
             runAsGroup: 65532

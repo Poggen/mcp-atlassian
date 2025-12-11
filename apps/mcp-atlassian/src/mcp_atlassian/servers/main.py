@@ -1,12 +1,18 @@
 """Main FastMCP server setup for Atlassian integration."""
 
 import logging
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any, Literal, Optional
+from urllib.parse import urlparse
 
 from cachetools import TTLCache
+
 from fastmcp import FastMCP
+from fastmcp import settings as fastmcp_settings
+from fastmcp.server.auth.oauth_proxy import OAuthProxy
+from key_value.aio.stores.memory import MemoryStore
 from fastmcp.tools import Tool as FastMCPTool
 from mcp.types import Tool as MCPTool
 from starlette.applications import Starlette
@@ -19,10 +25,12 @@ from mcp_atlassian.confluence import ConfluenceFetcher
 from mcp_atlassian.confluence.config import ConfluenceConfig
 from mcp_atlassian.jira import JiraFetcher
 from mcp_atlassian.jira.config import JiraConfig
+from mcp_atlassian.storage import JetStreamKVStore
 from mcp_atlassian.utils.environment import get_available_services
 from mcp_atlassian.utils.io import is_read_only_mode
 from mcp_atlassian.utils.logging import mask_sensitive
 from mcp_atlassian.utils.tools import get_enabled_tools, should_include_tool
+from mcp_atlassian.utils.token_verifier import AtlassianOpaqueTokenVerifier
 
 from .confluence import confluence_mcp
 from .context import MainAppContext
@@ -189,14 +197,20 @@ class AtlassianMCP(FastMCP[MainAppContext]):
         self,
         path: str | None = None,
         middleware: list[Middleware] | None = None,
-        transport: Literal["streamable-http", "sse"] = "streamable-http",
+        json_response: bool | None = None,
+        stateless_http: bool | None = None,
+        transport: Literal["http", "streamable-http", "sse"] = "streamable-http",
     ) -> "Starlette":
         user_token_mw = Middleware(UserTokenMiddleware, mcp_server_ref=self)
         final_middleware_list = [user_token_mw]
         if middleware:
             final_middleware_list.extend(middleware)
         app = super().http_app(
-            path=path, middleware=final_middleware_list, transport=transport
+            path=path,
+            middleware=final_middleware_list,
+            json_response=json_response,
+            stateless_http=stateless_http,
+            transport=transport,
         )
         return app
 
@@ -232,7 +246,7 @@ class UserTokenMiddleware(BaseHTTPMiddleware):
             )
             return await call_next(request)
 
-        mcp_path = mcp_server_instance.settings.streamable_http_path.rstrip("/")
+        mcp_path = (fastmcp_settings.streamable_http_path or "/mcp").rstrip("/")
         request_path = request.url.path.rstrip("/")
         logger.debug(
             f"UserTokenMiddleware.dispatch: Comparing request_path='{request_path}' with mcp_path='{mcp_path}'. Request method='{request.method}'"
@@ -325,9 +339,101 @@ class UserTokenMiddleware(BaseHTTPMiddleware):
         return response
 
 
-main_mcp = AtlassianMCP(name="Atlassian MCP", lifespan=main_lifespan)
-main_mcp.mount("jira", jira_mcp)
-main_mcp.mount("confluence", confluence_mcp)
+def _build_client_storage():
+    """Choose backing store for OAuthProxy client registrations.
+
+    We prefer JetStream KV (persistent across pod restarts) when NATS is
+    configured; otherwise fall back to in-memory for simple/local runs.
+    """
+
+    backend = os.getenv("STORAGE_BACKEND", "memory").lower()
+    if backend != "jetstream":
+        logger.info("Using in-memory OAuth client storage (backend=%s)", backend)
+        return MemoryStore()
+
+    nats_url = os.getenv("NATS_URL")
+    bucket_prefix = os.getenv("STORAGE_BUCKET_PREFIX", "mcp-client-")
+    default_collection = os.getenv("STORAGE_DEFAULT_COLLECTION", "registrations")
+    creds_path = os.getenv("NATS_CREDS_PATH", "/var/run/secrets/nats/user.creds")
+
+    if not nats_url:
+        logger.warning("JetStream backend requested but NATS_URL is missing; falling back to memory")
+        return MemoryStore()
+
+    try:
+        return JetStreamKVStore(
+            nats_url=nats_url,
+            creds_path=creds_path if os.path.exists(creds_path) else None,
+            bucket_prefix=bucket_prefix,
+            default_collection=default_collection,
+        )
+    except Exception:
+        logger.exception("Failed to initialise JetStreamKVStore; falling back to memory store")
+        return MemoryStore()
+
+
+def _build_auth_provider() -> OAuthProxy | None:
+    """Create the OAuth proxy auth provider so clients see OAuth support."""
+
+    instance_url = os.getenv("ATLASSIAN_OAUTH_INSTANCE_URL")
+    client_id = os.getenv("ATLASSIAN_OAUTH_CLIENT_ID")
+    client_secret = os.getenv("ATLASSIAN_OAUTH_CLIENT_SECRET")
+    redirect_uri = os.getenv("ATLASSIAN_OAUTH_REDIRECT_URI")
+    scope_env = os.getenv("ATLASSIAN_OAUTH_SCOPE", "")
+
+    # If required pieces are missing, do not register auth (tools will still run)
+    if not all([instance_url, client_id, client_secret, redirect_uri]):
+        return None
+
+    scopes = [s for part in scope_env.replace(",", " ").split() if (s := part)]
+
+    # Public base URL for discovery; fall back to localhost for dev
+    host = os.getenv("HOST", "0.0.0.0")
+    port = os.getenv("PORT", "3000")
+    base_url = os.getenv("PUBLIC_BASE_URL")
+    if not base_url:
+        host_for_url = "localhost" if host in ("0.0.0.0", "127.0.0.1") else host
+        base_url = f"http://{host_for_url}:{port}"
+
+    parsed_redirect = urlparse(redirect_uri)
+    redirect_path = parsed_redirect.path or "/callback"
+
+    upstream_authorize = instance_url.rstrip("/") + "/rest/oauth2/latest/authorize"
+    upstream_token = instance_url.rstrip("/") + "/rest/oauth2/latest/token"
+
+    allowed_client_redirect_uris = [
+        "http://localhost:*",
+        "http://127.0.0.1:*",
+    ]
+
+    verifier = AtlassianOpaqueTokenVerifier(required_scopes=scopes)
+
+    return OAuthProxy(
+        upstream_authorization_endpoint=upstream_authorize,
+        upstream_token_endpoint=upstream_token,
+        upstream_client_id=client_id,
+        upstream_client_secret=client_secret,
+        token_verifier=verifier,
+        base_url=base_url,
+        redirect_path=redirect_path,
+        allowed_client_redirect_uris=allowed_client_redirect_uris,
+        valid_scopes=scopes or None,
+        token_endpoint_auth_method="client_secret_post",
+        extra_token_params={
+            "client_id": client_id,
+            "client_secret": client_secret,
+        },
+        client_storage=_build_client_storage(),
+    )
+
+
+main_mcp = AtlassianMCP(
+    name="Atlassian MCP",
+    lifespan=main_lifespan,
+    auth=_build_auth_provider(),
+)
+main_mcp.mount(jira_mcp, "jira")
+main_mcp.mount(confluence_mcp, "confluence")
 
 
 @main_mcp.custom_route("/healthz", methods=["GET"], include_in_schema=False)

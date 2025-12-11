@@ -1,3 +1,5 @@
+systemName: mcp-atlassian
+
 drive:
   stageName: local
   systemName: mcp-atlassian
@@ -80,7 +82,28 @@ drive:
         cpu: "200m"
         memory: "128Mi"
 
+
   confluence:
+    enabled: true
+    tag: latest
+    replicaCount: 1
+    profile: generic
+    db: false
+    nats:
+      enabled: true
+      permissions:
+        pub:
+          - "$KV.>"
+          - "$kv.>"
+          - "$JS.API.>"
+          - "_INBOX.>"
+          - "mcp.client.>"
+        sub:
+          - "$KV.>"
+          - "$kv.>"
+          - "$JS.API.>"
+          - "_INBOX.>"
+          - "mcp.client.>"
     env:
       TRANSPORT: streamable-http
       PORT: "3000"
@@ -90,7 +113,7 @@ drive:
       READ_ONLY_MODE: "true"
       CONFLUENCE_URL: "https://wcar-confluence-test.riada.se"
       STORAGE_BACKEND: jetstream
-      STORAGE_BUCKET_PREFIX: mcp-confluence-client3-
+      STORAGE_BUCKET_PREFIX: mcp-confluence-client-
       STORAGE_DEFAULT_COLLECTION: registrations
       JWT_SIGNING_KEY: "dev-jwt-signing-key-change-me"
       STORAGE_ENCRYPTION_KEY: "f8XkS6zWIZ2shB_QhSiaY9hjiawR1C0tqJg8PJo3lqA="
