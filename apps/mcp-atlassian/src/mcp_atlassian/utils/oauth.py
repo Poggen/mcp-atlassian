@@ -142,8 +142,9 @@ class OAuthConfig:
             self.refresh_token = token_data["refresh_token"]
             self.expires_at = time.time() + token_data["expires_in"]
 
-            # Get the cloud ID using the access token
-            self._get_cloud_id()
+            # Get the cloud ID using the access token (Cloud only)
+            if self.cloud_id is None:
+                self._get_cloud_id()
 
             # Save the tokens
             self._save_tokens()

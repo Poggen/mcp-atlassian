@@ -150,6 +150,7 @@ class ConfluenceConfig:
             bool: True if authentication is fully configured, False otherwise.
         """
         logger = logging.getLogger("mcp-atlassian.confluence.config")
+        is_cloud = is_atlassian_cloud_url(self.url)
         if self.auth_type == "oauth":
             # Handle different OAuth configuration types
             if self.oauth_config:
@@ -160,7 +161,7 @@ class ConfluenceConfig:
                         and self.oauth_config.client_secret
                         and self.oauth_config.redirect_uri
                         and self.oauth_config.scope
-                        and self.oauth_config.cloud_id
+                        and (self.oauth_config.cloud_id or not is_cloud)
                     ):
                         return True
                     # Minimal OAuth configuration (user-provided tokens mode)
