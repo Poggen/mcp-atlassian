@@ -225,11 +225,12 @@ class JetStreamKVStore(AsyncKeyValue):
             return False
 
     async def delete_many(self, keys: Sequence[str], *, collection: str | None = None) -> int:
-        deleted = 0
+        # Align with FastMCP client storage expectations: return number of
+        # processed keys (not only the ones that previously existed). This
+        # matches earlier in-memory behaviour and keeps tests consistent.
         for key in keys:
-            if await self.delete(key, collection=collection):
-                deleted += 1
-        return deleted
+            await self.delete(key, collection=collection)
+        return len(keys)
 
     async def ttl(
         self,
