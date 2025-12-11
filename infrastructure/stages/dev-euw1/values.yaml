@@ -28,6 +28,7 @@ drive:
 
   apps:
     mcp-atlassian:
+      tag: latest
       replicaCount: 1
       profile: generic
 
