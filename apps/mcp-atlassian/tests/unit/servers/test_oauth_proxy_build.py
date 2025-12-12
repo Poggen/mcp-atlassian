@@ -63,3 +63,20 @@ def test_build_auth_provider_supports_root_redirect_uri(monkeypatch):
     assert provider is not None
     assert str(provider.base_url).rstrip("/") == "http://localhost:3000"
     assert provider._redirect_path == "/callback"
+
+
+def test_build_auth_provider_allows_chatgpt_oauth_redirect(monkeypatch):
+    monkeypatch.delenv("PUBLIC_BASE_URL", raising=False)
+    monkeypatch.delenv("ATLASSIAN_OAUTH_INSTANCE_URL", raising=False)
+    monkeypatch.setenv("JIRA_URL", "https://jira.example.com")
+    _set_required_oauth_env(
+        monkeypatch, redirect_uri="https://mcp.example.com/mcp-atlassian/callback"
+    )
+
+    provider = _build_auth_provider()
+
+    assert provider is not None
+    assert (
+        "https://chatgpt.com/connector_platform_oauth_redirect"
+        in provider._allowed_client_redirect_uris
+    )

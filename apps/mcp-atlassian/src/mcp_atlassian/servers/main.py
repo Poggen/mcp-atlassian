@@ -425,6 +425,8 @@ def _build_auth_provider() -> OAuthProxy | None:
     allowed_client_redirect_uris = [
         "http://localhost:*",
         "http://127.0.0.1:*",
+        "https://chatgpt.com/connector_platform_oauth_redirect",
+        "https://chat.openai.com/connector_platform_oauth_redirect",
     ]
 
     verifier = AtlassianOpaqueTokenVerifier(required_scopes=scopes)
