@@ -264,6 +264,29 @@ def use_real_confluence_data(request):
     return request.config.getoption("--use-real-data")
 
 
+@pytest.fixture(autouse=True)
+def disable_otel_env(monkeypatch: pytest.MonkeyPatch):
+    """Ensure OpenTelemetry env vars don't affect test runs.
+
+    Some developers have OTEL env vars set globally. This repository's entrypoint
+    bootstraps OTEL when `OTEL_TRACES_EXPORTER` is configured, so tests should
+    start from a known-safe baseline.
+    """
+    for var in (
+        "OTEL_SDK_DISABLED",
+        "OTEL_TRACES_EXPORTER",
+        "OTEL_LOGS_EXPORTER",
+        "OTEL_METRICS_EXPORTER",
+        "OTEL_EXPORTER_OTLP_ENDPOINT",
+        "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
+        "OTEL_SERVICE_NAME",
+        "OTEL_RESOURCE_ATTRIBUTES",
+    ):
+        monkeypatch.delenv(var, raising=False)
+
+    yield
+
+
 # ============================================================================
 # Advanced Environment Utilities
 # ============================================================================

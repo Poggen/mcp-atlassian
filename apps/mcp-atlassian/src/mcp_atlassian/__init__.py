@@ -14,6 +14,7 @@ from mcp_atlassian.utils.lifecycle import (
     setup_signal_handlers,
 )
 from mcp_atlassian.utils.logging import setup_logging
+from mcp_atlassian.utils.otel import setup_otel, shutdown_otel
 
 try:
     __version__ = version("mcp-atlassian")
@@ -347,6 +348,7 @@ def main(
         logger.debug("STDIO transport detected, setting up stdin monitoring")
 
     try:
+        setup_otel()
         logger.debug("Starting asyncio event loop...")
 
         # For stdio transport, don't monitor stdin as MCP server handles it internally
@@ -367,6 +369,7 @@ def main(
         logger.error(f"Server encountered an error: {e}", exc_info=True)
         sys.exit(1)
     finally:
+        shutdown_otel()
         ensure_clean_exit()
 
 

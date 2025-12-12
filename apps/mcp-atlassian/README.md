@@ -149,6 +149,9 @@ There are two main approaches to configure the Docker container:
 >
 > See the [.env.example](https://github.com/sooperset/mcp-atlassian/blob/main/.env.example) file for all available options.
 
+> [!TIP]
+> **OpenTelemetry (OTEL):** When `OTEL_TRACES_EXPORTER` is set (e.g. `otlp` or `console`), `mcp-atlassian` initializes the OpenTelemetry SDK, emits spans for MCP operations, and instruments outbound HTTP via `requests`. Query strings are stripped from recorded URLs to reduce PII leakage.
+
 
 ### 📝 Configuration Examples
 

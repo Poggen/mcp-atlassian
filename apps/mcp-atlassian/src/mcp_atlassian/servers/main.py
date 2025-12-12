@@ -29,6 +29,7 @@ from mcp_atlassian.storage import JetStreamKVStore
 from mcp_atlassian.utils.environment import get_available_services
 from mcp_atlassian.utils.io import is_read_only_mode
 from mcp_atlassian.utils.logging import mask_sensitive
+from mcp_atlassian.utils.otel_middleware import OpenTelemetryMiddleware
 from mcp_atlassian.utils.token_verifier import AtlassianOpaqueTokenVerifier
 from mcp_atlassian.utils.tools import get_enabled_tools, should_include_tool
 
@@ -465,6 +466,7 @@ main_mcp = AtlassianMCP(
     lifespan=main_lifespan,
     auth=_build_auth_provider(),
 )
+main_mcp.add_middleware(OpenTelemetryMiddleware())
 main_mcp.mount(jira_mcp, "jira")
 main_mcp.mount(confluence_mcp, "confluence")
 
