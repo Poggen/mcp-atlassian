@@ -22,7 +22,7 @@ drive:
         maxBytesRequired: false
 
   otel:
-    enabled: false
+    enabled: true
 
   secrets:
     - mcp-atlassian-storage
@@ -38,6 +38,14 @@ drive:
         gated: true
         public: true
         path: /mcp
+
+      extraEgress:
+        - toFQDNs:
+            - matchName: "wcar-jira-test.riada.se"
+          toPorts:
+            - ports:
+                - port: "443"
+                  protocol: TCP
 
       nats:
         enabled: true

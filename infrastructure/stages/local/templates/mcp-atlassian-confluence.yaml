@@ -57,12 +57,21 @@ spec:
               value: "http://otel-in-cluster-collector.monitoring.svc.cluster.local:4318"
             - name: OTEL_RESOURCE_ATTRIBUTES
               value: "service.namespace={{ .Values.drive.systemName }}-{{ .Values.drive.stageName }},service.stage={{ .Values.drive.stageName }}"
+            {{- if .Values.drive.otel.enabled }}
+            - name: OTEL_LOGS_EXPORTER
+              value: "otlp"
+            - name: OTEL_METRICS_EXPORTER
+              value: "otlp"
+            - name: OTEL_TRACES_EXPORTER
+              value: "otlp"
+            {{- else }}
             - name: OTEL_LOGS_EXPORTER
               value: "none"
             - name: OTEL_METRICS_EXPORTER
               value: "none"
             - name: OTEL_TRACES_EXPORTER
               value: "none"
+            {{- end }}
             - name: NATS_URL
               value: "nats://nats.nats.svc.cluster.local:4222"
             {{- range $key, $value := $appDetails.env }}

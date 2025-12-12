@@ -4,6 +4,10 @@
 {{- $appName := "mcp-atlassian-confluence" -}}
 {{- $appDetails := dict "tag" (index (index .Values.drive.apps "mcp-atlassian") "tag") -}}
 {{- $app := .Values.drive.confluence -}}
+{{- $systemName := lower .Values.drive.systemName -}}
+{{- $stageName := lower .Values.drive.stageName -}}
+{{- $confluenceUrl := default "" (index $app.env "CONFLUENCE_URL") -}}
+{{- $confluenceHost := $confluenceUrl | trimPrefix "https://" | trimPrefix "http://" | splitList "/" | first -}}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -51,12 +55,21 @@ spec:
               value: "http://otel-in-cluster-collector.monitoring.svc.cluster.local:4318"
             - name: OTEL_RESOURCE_ATTRIBUTES
               value: "service.namespace={{ .Values.drive.systemName }}-{{ .Values.drive.stageName }},service.stage={{ .Values.drive.stageName }}"
+            {{- if .Values.drive.otel.enabled }}
+            - name: OTEL_LOGS_EXPORTER
+              value: "otlp"
+            - name: OTEL_METRICS_EXPORTER
+              value: "otlp"
+            - name: OTEL_TRACES_EXPORTER
+              value: "otlp"
+            {{- else }}
             - name: OTEL_LOGS_EXPORTER
               value: "none"
             - name: OTEL_METRICS_EXPORTER
               value: "none"
             - name: OTEL_TRACES_EXPORTER
               value: "none"
+            {{- end }}
             - name: NATS_URL
               value: "nats://nats.nats.svc.cluster.local:4222"
             {{- range $key, $value := $app.env }}
@@ -111,6 +124,57 @@ spec:
     - port: 80
       targetPort: 3000
       name: http
+{{- if ne $stageName "local" }}
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/cilium.io/ciliumnetworkpolicy_v2.json
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: {{ $appName }}-network
+  labels:
+    {{- include "drive-service-infra.appLabels" (dict "appName" $appName "appDetails" $appDetails "context" .) | nindent 4 }}
+spec:
+  endpointSelector:
+    matchLabels:
+      k8s:io.kubernetes.pod.namespace: {{ printf "%s-%s" $systemName $stageName }}
+      k8s:app.kubernetes.io/name: {{ $appName }}
+  ingress:
+    - fromEntities:
+        - ingress
+      toPorts:
+        - ports:
+            - port: "3000"
+              protocol: TCP
+  egress:
+    {{- if .Values.drive.otel.enabled }}
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: monitoring
+            k8s:app.kubernetes.io/name: otel-in-cluster-collector
+      toPorts:
+        - ports:
+            - port: "4318"
+              protocol: TCP
+    {{- end }}
+    {{- if and .Values.drive.nats .Values.drive.nats.enabled }}
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: nats
+            k8s:app.kubernetes.io/name: nats
+      toPorts:
+        - ports:
+            - port: "4222"
+              protocol: TCP
+    {{- end }}
+    {{- if $confluenceHost }}
+    - toFQDNs:
+        - matchName: {{ $confluenceHost | quote }}
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+    {{- end }}
+{{- end }}
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
