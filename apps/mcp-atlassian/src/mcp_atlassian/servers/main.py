@@ -375,7 +375,7 @@ def _build_client_storage():
 def _build_auth_provider() -> OAuthProxy | None:
     """Create the OAuth proxy auth provider so clients see OAuth support."""
 
-    instance_url = os.getenv("ATLASSIAN_OAUTH_INSTANCE_URL")
+    instance_url = os.getenv("ATLASSIAN_OAUTH_INSTANCE_URL") or os.getenv("JIRA_URL") or os.getenv("CONFLUENCE_URL")
     client_id = os.getenv("ATLASSIAN_OAUTH_CLIENT_ID")
     client_secret = os.getenv("ATLASSIAN_OAUTH_CLIENT_SECRET")
     redirect_uri = os.getenv("ATLASSIAN_OAUTH_REDIRECT_URI")
@@ -387,16 +387,37 @@ def _build_auth_provider() -> OAuthProxy | None:
 
     scopes = [s for part in scope_env.replace(",", " ").split() if (s := part)]
 
-    # Public base URL for discovery; fall back to localhost for dev
-    host = os.getenv("HOST", "0.0.0.0")
-    port = os.getenv("PORT", "3000")
+    parsed_redirect = urlparse(redirect_uri)
+    raw_redirect_path = parsed_redirect.path or "/callback"
+
+    # Public base URL for discovery; prefer explicit env var, then infer from the
+    # externally-registered redirect URI, and finally fall back to localhost for
+    # local/dev runs.
     base_url = os.getenv("PUBLIC_BASE_URL")
+    if not base_url and parsed_redirect.scheme and parsed_redirect.netloc:
+        redirect_dir = raw_redirect_path.rsplit("/", 1)[0]
+        base_url = f"{parsed_redirect.scheme}://{parsed_redirect.netloc}{redirect_dir}"
+
     if not base_url:
+        host = os.getenv("HOST", "0.0.0.0")
+        port = os.getenv("PORT", "3000")
         host_for_url = "localhost" if host in ("0.0.0.0", "127.0.0.1") else host
         base_url = f"http://{host_for_url}:{port}"
 
-    parsed_redirect = urlparse(redirect_uri)
-    redirect_path = parsed_redirect.path or "/callback"
+    # The service is frequently deployed behind a gateway that strips a path
+    # prefix (e.g. external `/mcp-atlassian/*` → internal `/*`). In that setup,
+    # the upstream redirect URI includes the external prefix, but the internal
+    # FastMCP route must be registered without it.
+    base_path = urlparse(base_url).path.rstrip("/")
+    redirect_path = raw_redirect_path
+    if base_path:
+        if redirect_path == base_path:
+            redirect_path = "/"
+        elif redirect_path.startswith(base_path + "/"):
+            redirect_path = redirect_path[len(base_path) :]
+
+    if not redirect_path.startswith("/"):
+        redirect_path = "/" + redirect_path
 
     upstream_authorize = instance_url.rstrip("/") + "/rest/oauth2/latest/authorize"
     upstream_token = instance_url.rstrip("/") + "/rest/oauth2/latest/token"
