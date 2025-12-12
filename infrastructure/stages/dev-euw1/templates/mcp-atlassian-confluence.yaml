@@ -38,7 +38,7 @@ spec:
       volumes:
         - name: nats-user-creds
           secret:
-            secretName: nack-nats-user-creds
+            secretName: mcp-atlassian-nats-user-creds
             optional: false
       containers:
         - name: main
