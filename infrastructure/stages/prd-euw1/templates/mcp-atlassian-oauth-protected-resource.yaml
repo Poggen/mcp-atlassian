@@ -1,0 +1,71 @@
+# Route RFC9728 / MCP protected resource metadata at the host root.
+#
+# MCP clients discover OAuth via the `WWW-Authenticate: ... resource_metadata=...`
+# URL. That URL is derived from the protected resource URL by inserting
+# `/.well-known/oauth-protected-resource` between the host and the resource path
+# (e.g. `https://host/mcp-atlassian/mcp` -> `https://host/.well-known/oauth-protected-resource/mcp-atlassian/mcp`).
+#
+# Since the MCP server itself is mounted behind a gateway path prefix
+# (`/mcp-atlassian/*` -> `/*`), we need an explicit HTTPRoute for the root
+# `/.well-known/oauth-protected-resource/...` paths so clients like ChatGPT can
+# fetch the discovery document.
+
+{{- $appDetails := dict "tag" (index (index .Values.drive.apps "mcp-atlassian") "tag") -}}
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: mcp-atlassian-oauth-protected-resource-public
+  labels:
+    {{- include "drive-service-infra.appLabels" (dict "appName" "mcp-atlassian" "appDetails" $appDetails "context" .) | nindent 4 }}
+spec:
+  hostnames:
+    - {{ .Values.drive.systemName }}.public.{{ .Values.drive.stageName }}.{{ .Values.drive.verticalId }}.{{ .Values.drive.domain.default }}
+  parentRefs:
+    - name: public-gw
+      namespace: gateway-system
+      sectionName: {{ .Values.drive.stageName }}.{{ .Values.drive.verticalId }}.{{ .Values.drive.domain.default }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /.well-known/oauth-protected-resource/mcp-atlassian/mcp
+      backendRefs:
+        - name: mcp-atlassian
+          port: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /.well-known/oauth-protected-resource/mcp-atlassian-confluence/mcp
+      backendRefs:
+        - name: mcp-atlassian-confluence
+          port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: mcp-atlassian-oauth-protected-resource-gated
+  labels:
+    {{- include "drive-service-infra.appLabels" (dict "appName" "mcp-atlassian" "appDetails" $appDetails "context" .) | nindent 4 }}
+spec:
+  hostnames:
+    - {{ .Values.drive.systemName }}.gated.{{ .Values.drive.stageName }}.{{ .Values.drive.verticalId }}.{{ .Values.drive.domain.default }}
+  parentRefs:
+    - name: gated-gw
+      namespace: gateway-system
+      sectionName: {{ .Values.drive.stageName }}.{{ .Values.drive.verticalId }}.{{ .Values.drive.domain.default }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /.well-known/oauth-protected-resource/mcp-atlassian/mcp
+      backendRefs:
+        - name: mcp-atlassian
+          port: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /.well-known/oauth-protected-resource/mcp-atlassian-confluence/mcp
+      backendRefs:
+        - name: mcp-atlassian-confluence
+          port: 80
