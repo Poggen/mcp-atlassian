@@ -66,7 +66,8 @@ class UsersMixin(ConfluenceClient):
             if not isinstance(user_data, dict):
                 if not self.config.is_cloud:
                     logger.warning(
-                        "Confluence DC /rest/api/user/current returned non-dict (%s); continuing without user profile", type(user_data)
+                        "Confluence DC /rest/api/user/current returned non-dict (%s); continuing without user profile",
+                        type(user_data),
                     )
                     return {"raw": str(user_data)[:500]}
                 logger.error(

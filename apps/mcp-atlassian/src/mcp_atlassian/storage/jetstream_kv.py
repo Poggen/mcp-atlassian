@@ -11,12 +11,19 @@ import json
 import logging
 import os
 import re
-from datetime import timedelta
-from typing import Any, Mapping, Sequence, SupportsFloat
+from collections.abc import Mapping, Sequence
+from typing import Any, SupportsFloat
 
 from key_value.aio.protocols.key_value import AsyncKeyValue
 
 logger = logging.getLogger(__name__)
+
+
+class _BucketNotFoundFallbackError(Exception): ...
+
+
+class _KeyNotFoundFallbackError(Exception): ...
+
 
 try:  # Optional dependency
     import nats  # type: ignore
@@ -24,11 +31,8 @@ try:  # Optional dependency
 except Exception:  # pragma: no cover - import guard only
     nats = None  # type: ignore
 
-    class BucketNotFoundError(Exception):
-        ...
-
-    class KeyNotFoundError(Exception):
-        ...
+    BucketNotFoundError = _BucketNotFoundFallbackError  # type: ignore[misc]
+    KeyNotFoundError = _KeyNotFoundFallbackError  # type: ignore[misc]
 
 
 class JetStreamKVStore(AsyncKeyValue):
@@ -41,20 +45,20 @@ class JetStreamKVStore(AsyncKeyValue):
         creds_path: str | None = None,
         bucket_prefix: str = "mcp-client-",
         default_collection: str = "registrations",
-        js=None,
+        js: Any | None = None,
         connect_timeout: float = 5.0,
     ) -> None:
         self.nats_url = nats_url
         self.creds_path = creds_path
         self.bucket_prefix = bucket_prefix
         self.default_collection = default_collection
-        self._js = js
-        self._nc = None
+        self._js: Any | None = js
+        self._nc: Any | None = None
         self._bucket_cache: dict[str, Any] = {}
         self._lock = asyncio.Lock()
         self.connect_timeout = connect_timeout
         self._inmem_user_jwt: str | None = None
-        self._inmem_sig_cb = None
+        self._inmem_sig_cb: Any | None = None
 
     def _build_auth_kwargs(self, path: str) -> dict[str, Any]:
         """Return kwargs for nats.connect based on creds content.
@@ -71,6 +75,7 @@ class JetStreamKVStore(AsyncKeyValue):
         # Heuristic: base64-encoded creds start with LS0t...
         if raw.strip().startswith(b"LS0tLS1CRUdJTiBOQVRTIFVTRVIgSldU"):
             import base64
+
             decoded = base64.b64decode(raw)
             text = decoded.decode()
         else:
@@ -109,6 +114,7 @@ class JetStreamKVStore(AsyncKeyValue):
         def sig_cb(nonce: str) -> bytes:
             # nats.py expects signature bytes decodable to utf-8; base64-encode to be safe.
             import base64
+
             return base64.b64encode(kp.sign(nonce.encode()))
 
         def jwt_cb() -> bytes:
@@ -118,7 +124,7 @@ class JetStreamKVStore(AsyncKeyValue):
         self._inmem_sig_cb = sig_cb
         return {"user_jwt_cb": jwt_cb, "signature_cb": sig_cb}
 
-    async def _ensure_connection(self):
+    async def _ensure_connection(self) -> None:
         if self._js:
             return
         if nats is None:
@@ -130,17 +136,22 @@ class JetStreamKVStore(AsyncKeyValue):
         if self.creds_path and os.path.exists(self.creds_path):
             connect_kwargs.update(self._build_auth_kwargs(self.creds_path))
         try:
-            self._nc = await nats.connect(**connect_kwargs, connect_timeout=self.connect_timeout)
-            self._js = self._nc.jetstream()
+            nc = await nats.connect(
+                **connect_kwargs, connect_timeout=self.connect_timeout
+            )
+            self._nc = nc
+            self._js = nc.jetstream()
         except Exception as exc:  # pragma: no cover - connection failures
-            raise RuntimeError(f"Failed to connect to NATS at {self.nats_url}: {exc}") from exc
+            raise RuntimeError(
+                f"Failed to connect to NATS at {self.nats_url}: {exc}"
+            ) from exc
 
     def _bucket_name(self, collection: str | None) -> str:
         name = collection or self.default_collection
         safe = re.sub(r"[^A-Za-z0-9_-]", "-", name)
         return f"{self.bucket_prefix}{safe}" if self.bucket_prefix else safe
 
-    async def _get_bucket(self, collection: str | None):
+    async def _get_bucket(self, collection: str | None) -> Any:
         await self._ensure_connection()
         bucket_name = self._bucket_name(collection)
         async with self._lock:
@@ -161,7 +172,13 @@ class JetStreamKVStore(AsyncKeyValue):
     def _decode(raw: bytes) -> dict[str, Any]:
         return json.loads(raw.decode())
 
-    async def get(self, key: str, *, collection: str | None = None, raise_on_missing=False):
+    async def get(
+        self,
+        key: str,
+        *,
+        collection: str | None = None,
+        raise_on_missing: bool = False,
+    ) -> dict[str, Any] | None:
         bucket = await self._get_bucket(collection)
         try:
             entry = await bucket.get(key)
@@ -182,7 +199,11 @@ class JetStreamKVStore(AsyncKeyValue):
         results: list[dict[str, Any] | None] = []
         for key in keys:
             try:
-                results.append(await self.get(key, collection=collection, raise_on_missing=raise_on_missing))
+                results.append(
+                    await self.get(
+                        key, collection=collection, raise_on_missing=raise_on_missing
+                    )
+                )
             except KeyNotFoundError:
                 if raise_on_missing:
                     raise
@@ -213,7 +234,7 @@ class JetStreamKVStore(AsyncKeyValue):
         collection: str | None = None,
         ttl: SupportsFloat | None = None,
     ) -> None:
-        for key, value in zip(keys, values):
+        for key, value in zip(keys, values, strict=False):
             await self.put(key, value, collection=collection, ttl=ttl)
 
     async def delete(self, key: str, *, collection: str | None = None) -> None:
@@ -224,7 +245,9 @@ class JetStreamKVStore(AsyncKeyValue):
         except KeyNotFoundError:
             return False
 
-    async def delete_many(self, keys: Sequence[str], *, collection: str | None = None) -> int:
+    async def delete_many(
+        self, keys: Sequence[str], *, collection: str | None = None
+    ) -> int:
         # Align with FastMCP client storage expectations: return number of
         # processed keys (not only the ones that previously existed). This
         # matches earlier in-memory behaviour and keeps tests consistent.
@@ -239,7 +262,9 @@ class JetStreamKVStore(AsyncKeyValue):
         collection: str | None = None,
         raise_on_missing: bool = False,
     ) -> tuple[dict[str, Any] | None, float | None]:
-        value = await self.get(key, collection=collection, raise_on_missing=raise_on_missing)
+        value = await self.get(
+            key, collection=collection, raise_on_missing=raise_on_missing
+        )
         return value, None
 
     async def ttl_many(
@@ -251,7 +276,9 @@ class JetStreamKVStore(AsyncKeyValue):
     ) -> list[tuple[dict[str, Any] | None, float | None]]:
         results: list[tuple[dict[str, Any] | None, float | None]] = []
         for key in keys:
-            val, ttl = await self.ttl(key, collection=collection, raise_on_missing=raise_on_missing)
+            val, ttl = await self.ttl(
+                key, collection=collection, raise_on_missing=raise_on_missing
+            )
             results.append((val, ttl))
         return results
 

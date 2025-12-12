@@ -56,12 +56,13 @@ class JiraClient:
                 raise MCPAtlassianAuthenticationError(error_msg)
 
             if self.config.is_cloud:
-                if not self.config.oauth_config or not self.config.oauth_config.cloud_id:
+                if (
+                    not self.config.oauth_config
+                    or not self.config.oauth_config.cloud_id
+                ):
                     error_msg = "OAuth authentication requires a valid cloud_id"
                     raise ValueError(error_msg)
-                api_url = (
-                    f"https://api.atlassian.com/ex/jira/{self.config.oauth_config.cloud_id}"
-                )
+                api_url = f"https://api.atlassian.com/ex/jira/{self.config.oauth_config.cloud_id}"
                 cloud_flag = True
             else:
                 # Data Center OAuth: hit the instance directly with bearer auth

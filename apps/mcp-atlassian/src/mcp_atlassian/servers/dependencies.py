@@ -123,6 +123,11 @@ def _create_user_config_for_fetcher(
                 "but user auth_type is 'oauth'."
             )
         global_oauth_cfg = base_config.oauth_config
+        if global_oauth_cfg is None:
+            raise ValueError(
+                f"Global OAuth config for {type(base_config).__name__} is missing, "
+                "but user auth_type is 'oauth'."
+            )
 
         # Use provided cloud_id or fall back to global config cloud_id. Cloud ID is only
         # required for Atlassian Cloud; for Data Center the OAuth flows work without it.
@@ -134,16 +139,25 @@ def _create_user_config_for_fetcher(
                 "Provide it via X-Atlassian-Cloud-Id header or configure it globally."
             )
 
-        # For minimal OAuth config (user-provided tokens), use empty strings for client credentials
+        # For minimal OAuth config (user-provided tokens), the client credentials are not
+        # required. If global OAuthConfig exists, carry its values for completeness; if the
+        # global config is BYOAccessTokenOAuthConfig, fall back to empty strings.
+        client_id = ""
+        client_secret = ""
+        redirect_uri = ""
+        scope = ""
+
+        if isinstance(global_oauth_cfg, OAuthConfig):
+            client_id = global_oauth_cfg.client_id or ""
+            client_secret = global_oauth_cfg.client_secret or ""
+            redirect_uri = global_oauth_cfg.redirect_uri or ""
+            scope = global_oauth_cfg.scope or ""
+
         oauth_config_for_user = OAuthConfig(
-            client_id=global_oauth_cfg.client_id if global_oauth_cfg.client_id else "",
-            client_secret=global_oauth_cfg.client_secret
-            if global_oauth_cfg.client_secret
-            else "",
-            redirect_uri=global_oauth_cfg.redirect_uri
-            if global_oauth_cfg.redirect_uri
-            else "",
-            scope=global_oauth_cfg.scope if global_oauth_cfg.scope else "",
+            client_id=client_id,
+            client_secret=client_secret,
+            redirect_uri=redirect_uri,
+            scope=scope,
             access_token=user_access_token,
             refresh_token=None,
             expires_at=None,

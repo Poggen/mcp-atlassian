@@ -109,16 +109,29 @@ class ResourceTracker:
                     print(f"Failed to delete Confluence page {page_id}: {e}")
 
 
+@pytest.fixture(autouse=True, scope="module")
+def require_real_data_flag(request: pytest.FixtureRequest) -> None:
+    """Skip this module unless real API tests are explicitly enabled."""
+    if not request.config.getoption("--use-real-data"):
+        pytest.skip("Real API validation tests require pytest --use-real-data")
+
+
 @pytest.fixture
 def jira_config() -> JiraConfig:
     """Create a JiraConfig from environment variables."""
-    return JiraConfig.from_env()
+    try:
+        return JiraConfig.from_env()
+    except ValueError as exc:
+        pytest.skip(str(exc))
 
 
 @pytest.fixture
 def confluence_config() -> ConfluenceConfig:
     """Create a ConfluenceConfig from environment variables."""
-    return ConfluenceConfig.from_env()
+    try:
+        return ConfluenceConfig.from_env()
+    except ValueError as exc:
+        pytest.skip(str(exc))
 
 
 @pytest.fixture
@@ -239,7 +252,7 @@ class TestRealJiraValidation:
     2. The required Jira environment variables are not set
     """
 
-    @pytest.mark.anyio
+    @pytest.mark.anyio(backends=["asyncio"])
     async def test_get_issue(self, use_real_jira_data, api_validation_client):
         """Test that get_issue returns a proper JiraIssue model."""
         if not use_real_jira_data:
@@ -259,7 +272,7 @@ class TestRealJiraValidation:
         assert "id" in issue_data
         assert "summary" in issue_data
 
-    @pytest.mark.anyio
+    @pytest.mark.anyio(backends=["asyncio"])
     async def test_search_issues(self, use_real_jira_data, api_validation_client):
         """Test that search_issues returns JiraIssue models."""
         if not use_real_jira_data:
@@ -284,7 +297,7 @@ class TestRealJiraValidation:
             assert "id" in issue_dict
             assert "summary" in issue_dict
 
-    @pytest.mark.anyio
+    @pytest.mark.anyio(backends=["asyncio"])
     async def test_get_issue_comments(self, use_real_jira_data, api_validation_client):
         """Test that issue comments are properly converted to JiraComment models."""
         if not use_real_jira_data:
@@ -387,7 +400,7 @@ class TestRealConfluenceValidation:
             assert page.title is not None
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio(backends=["asyncio"])
 async def test_jira_get_issue(jira_client: JiraFetcher, test_issue_key: str) -> None:
     """Test retrieving an issue from Jira."""
     issue = jira_client.get_issue(test_issue_key)
@@ -397,7 +410,7 @@ async def test_jira_get_issue(jira_client: JiraFetcher, test_issue_key: str) -> 
     assert hasattr(issue, "fields") or hasattr(issue, "summary")
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio(backends=["asyncio"])
 async def test_jira_get_issue_with_fields(
     jira_client: JiraFetcher, test_issue_key: str
 ) -> None:
@@ -444,7 +457,7 @@ async def test_jira_get_issue_with_fields(
         assert "status" in list_data
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio(backends=["asyncio"])
 async def test_jira_get_epic_issues(
     jira_client: JiraFetcher, test_epic_key: str
 ) -> None:
@@ -459,7 +472,7 @@ async def test_jira_get_epic_issues(
             assert hasattr(issue, "id")
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio(backends=["asyncio"])
 async def test_confluence_get_page_content(
     confluence_client: ConfluenceFetcher, test_page_id: str
 ) -> None:
@@ -471,7 +484,7 @@ async def test_confluence_get_page_content(
     assert page.title is not None
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio(backends=["asyncio"])
 async def test_jira_create_issue(
     jira_client: JiraFetcher,
     test_project_key: str,
@@ -505,7 +518,7 @@ async def test_jira_create_issue(
         cleanup_resources()
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio(backends=["asyncio"])
 async def test_jira_create_subtask(
     jira_client: JiraFetcher,
     test_project_key: str,
@@ -559,7 +572,7 @@ async def test_jira_create_subtask(
         cleanup_resources()
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio(backends=["asyncio"])
 async def test_jira_create_task_with_parent(
     jira_client: JiraFetcher,
     test_project_key: str,
@@ -611,7 +624,7 @@ async def test_jira_create_task_with_parent(
         cleanup_resources()
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio(backends=["asyncio"])
 async def test_jira_create_epic(
     jira_client: JiraFetcher,
     test_project_key: str,
@@ -665,7 +678,7 @@ async def test_jira_create_epic(
         cleanup_resources()
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio(backends=["asyncio"])
 async def test_jira_add_comment(
     jira_client: JiraFetcher,
     test_issue_key: str,
@@ -703,7 +716,7 @@ async def test_jira_add_comment(
         cleanup_resources()
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio(backends=["asyncio"])
 async def test_confluence_create_page(
     confluence_client: ConfluenceFetcher,
     test_space_key: str,
@@ -753,7 +766,7 @@ async def test_confluence_create_page(
         cleanup_resources()
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio(backends=["asyncio"])
 async def test_confluence_update_page(
     confluence_client: ConfluenceFetcher,
     resource_tracker: ResourceTracker,
@@ -816,7 +829,7 @@ async def test_confluence_update_page(
         cleanup_resources()
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio(backends=["asyncio"])
 async def test_confluence_add_page_label(
     confluence_client: ConfluenceFetcher,
     resource_tracker: ResourceTracker,
@@ -845,7 +858,7 @@ async def test_confluence_add_page_label(
 
 
 @pytest.mark.skip(reason="This test modifies data - use with caution")
-@pytest.mark.anyio
+@pytest.mark.anyio(backends=["asyncio"])
 async def test_jira_transition_issue(
     jira_client: JiraFetcher,
     resource_tracker: ResourceTracker,
@@ -906,7 +919,7 @@ async def test_jira_transition_issue(
         cleanup_resources()
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio(backends=["asyncio"])
 async def test_jira_create_epic_with_custom_fields(
     jira_client: JiraFetcher,
     test_project_key: str,
@@ -992,7 +1005,7 @@ async def test_jira_create_epic_with_custom_fields(
         cleanup_resources()
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio(backends=["asyncio"])
 async def test_jira_create_epic_two_step(
     jira_client: JiraFetcher,
     test_project_key: str,
@@ -1080,9 +1093,12 @@ class TestRealToolValidation:
     Test class for validating tool calls with real API data.
     """
 
-    @pytest.mark.anyio
+    @pytest.mark.anyio(backends=["asyncio"])
     async def test_jira_search_with_start_at(
-        self, use_real_jira_data: bool, test_project_key: str
+        self,
+        use_real_jira_data: bool,
+        test_project_key: str,
+        api_validation_client: Client,
     ) -> None:
         """Test the jira_search tool with the startAt parameter."""
         if not use_real_jira_data:
@@ -1118,9 +1134,12 @@ class TestRealToolValidation:
                 f"Project {test_project_key} has less than 2 issues, cannot test pagination."
             )
 
-    @pytest.mark.anyio
+    @pytest.mark.anyio(backends=["asyncio"])
     async def test_jira_get_project_issues_with_start_at(
-        self, use_real_jira_data: bool, test_project_key: str
+        self,
+        use_real_jira_data: bool,
+        test_project_key: str,
+        api_validation_client: Client,
     ) -> None:
         """Test the jira_get_project_issues tool with the startAt parameter."""
         if not use_real_jira_data:
@@ -1155,9 +1174,12 @@ class TestRealToolValidation:
                 f"Project {test_project_key} has less than 2 issues, cannot test pagination."
             )
 
-    @pytest.mark.anyio
+    @pytest.mark.anyio(backends=["asyncio"])
     async def test_jira_get_epic_issues_with_start_at(
-        self, use_real_jira_data: bool, test_epic_key: str
+        self,
+        use_real_jira_data: bool,
+        test_epic_key: str,
+        api_validation_client: Client,
     ) -> None:
         """Test the jira_get_epic_issues tool with the startAt parameter."""
         if not use_real_jira_data:
@@ -1192,9 +1214,12 @@ class TestRealToolValidation:
                 f"Epic {test_epic_key} has less than 2 issues, cannot test pagination."
             )
 
-    @pytest.mark.anyio
+    @pytest.mark.anyio(backends=["asyncio"])
     async def test_jira_get_issue_includes_comments(
-        self, use_real_jira_data: bool, test_issue_key: str
+        self,
+        use_real_jira_data: bool,
+        test_issue_key: str,
+        api_validation_client: Client,
     ) -> None:
         """Test that jira_get_issue includes comments when comment_limit > 0."""
         if not use_real_jira_data:
@@ -1219,7 +1244,7 @@ class TestRealToolValidation:
         assert isinstance(result_without_comments, dict)
         assert "comments" not in result_without_comments
 
-    @pytest.mark.anyio
+    @pytest.mark.anyio(backends=["asyncio"])
     async def test_jira_get_link_types_tool(
         self, use_real_jira_data: bool, api_validation_client: Client
     ) -> None:
@@ -1246,7 +1271,7 @@ class TestRealToolValidation:
         assert "inward" in first_link
         assert "outward" in first_link
 
-    @pytest.mark.anyio
+    @pytest.mark.anyio(backends=["asyncio"])
     async def test_jira_create_issue_link_tool(
         self, use_real_jira_data: bool, test_project_key: str, api_validation_client
     ) -> None:
@@ -1349,7 +1374,7 @@ class TestRealToolValidation:
             )
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio(backends=["asyncio"])
 async def test_jira_get_issue_link_types(jira_client: JiraFetcher) -> None:
     """Test retrieving issue link types from Jira."""
     links_client = LinksMixin(config=jira_client.config)
@@ -1369,7 +1394,7 @@ async def test_jira_get_issue_link_types(jira_client: JiraFetcher) -> None:
         assert first_link.outward is not None
 
 
-@pytest.mark.anyio
+@pytest.mark.anyio(backends=["asyncio"])
 async def test_jira_create_and_remove_issue_link(
     jira_client: JiraFetcher,
     test_project_key: str,

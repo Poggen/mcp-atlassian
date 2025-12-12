@@ -67,7 +67,7 @@
 ### tmux
 - When to use: long/hanging commands (servers, debuggers, long tests, interactive CLIs) should start in tmux; avoid `tmux wait-for` and `while tmux …` loops; if a run exceeds ~10 min, treat it as potentially hung and inspect via tmux.
 - Start: `tmux new -d -s codex-shell -n shell`
-- Show user how to watch: 
+- Show user how to watch:
     - Attach: `tmux attach -t codex-shell`
     - One-off capture: `tmux capture-pane -p -J -t codex-shell:0.0 -S -200`
 - Send keys safely: `tmux send-keys -t codex-shell:0.0 -- 'python3 -q' Enter` (set `PYTHON_BASIC_REPL=1` for Python REPLs).

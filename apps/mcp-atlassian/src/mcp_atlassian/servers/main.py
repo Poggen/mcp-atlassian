@@ -8,12 +8,12 @@ from typing import Any, Literal, Optional
 from urllib.parse import urlparse
 
 from cachetools import TTLCache
-
 from fastmcp import FastMCP
 from fastmcp import settings as fastmcp_settings
 from fastmcp.server.auth.oauth_proxy import OAuthProxy
-from key_value.aio.stores.memory import MemoryStore
 from fastmcp.tools import Tool as FastMCPTool
+from key_value.aio.protocols.key_value import AsyncKeyValue
+from key_value.aio.stores.memory import MemoryStore
 from mcp.types import Tool as MCPTool
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
@@ -29,14 +29,16 @@ from mcp_atlassian.storage import JetStreamKVStore
 from mcp_atlassian.utils.environment import get_available_services
 from mcp_atlassian.utils.io import is_read_only_mode
 from mcp_atlassian.utils.logging import mask_sensitive
-from mcp_atlassian.utils.tools import get_enabled_tools, should_include_tool
 from mcp_atlassian.utils.token_verifier import AtlassianOpaqueTokenVerifier
+from mcp_atlassian.utils.tools import get_enabled_tools, should_include_tool
 
 from .confluence import confluence_mcp
 from .context import MainAppContext
 from .jira import jira_mcp
 
 logger = logging.getLogger("mcp-atlassian.server.main")
+
+DEFAULT_HOST = "0.0.0.0"  # noqa: S104
 
 
 async def health_check(request: Request) -> JSONResponse:
@@ -339,7 +341,7 @@ class UserTokenMiddleware(BaseHTTPMiddleware):
         return response
 
 
-def _build_client_storage():
+def _build_client_storage() -> AsyncKeyValue:
     """Choose backing store for OAuthProxy client registrations.
 
     We prefer JetStream KV (persistent across pod restarts) when NATS is
@@ -357,7 +359,9 @@ def _build_client_storage():
     creds_path = os.getenv("NATS_CREDS_PATH", "/var/run/secrets/nats/user.creds")
 
     if not nats_url:
-        logger.warning("JetStream backend requested but NATS_URL is missing; falling back to memory")
+        logger.warning(
+            "JetStream backend requested but NATS_URL is missing; falling back to memory"
+        )
         return MemoryStore()
 
     try:
@@ -368,14 +372,20 @@ def _build_client_storage():
             default_collection=default_collection,
         )
     except Exception:
-        logger.exception("Failed to initialise JetStreamKVStore; falling back to memory store")
+        logger.exception(
+            "Failed to initialise JetStreamKVStore; falling back to memory store"
+        )
         return MemoryStore()
 
 
 def _build_auth_provider() -> OAuthProxy | None:
     """Create the OAuth proxy auth provider so clients see OAuth support."""
 
-    instance_url = os.getenv("ATLASSIAN_OAUTH_INSTANCE_URL") or os.getenv("JIRA_URL") or os.getenv("CONFLUENCE_URL")
+    instance_url = (
+        os.getenv("ATLASSIAN_OAUTH_INSTANCE_URL")
+        or os.getenv("JIRA_URL")
+        or os.getenv("CONFLUENCE_URL")
+    )
     client_id = os.getenv("ATLASSIAN_OAUTH_CLIENT_ID")
     client_secret = os.getenv("ATLASSIAN_OAUTH_CLIENT_SECRET")
     redirect_uri = os.getenv("ATLASSIAN_OAUTH_REDIRECT_URI")
@@ -399,9 +409,9 @@ def _build_auth_provider() -> OAuthProxy | None:
         base_url = f"{parsed_redirect.scheme}://{parsed_redirect.netloc}{redirect_dir}"
 
     if not base_url:
-        host = os.getenv("HOST", "0.0.0.0")
+        host = os.getenv("HOST", DEFAULT_HOST)
         port = os.getenv("PORT", "3000")
-        host_for_url = "localhost" if host in ("0.0.0.0", "127.0.0.1") else host
+        host_for_url = "localhost" if host in (DEFAULT_HOST, "127.0.0.1") else host
         base_url = f"http://{host_for_url}:{port}"
 
     # The service is frequently deployed behind a gateway that strips a path
@@ -441,7 +451,7 @@ def _build_auth_provider() -> OAuthProxy | None:
         redirect_path=redirect_path,
         allowed_client_redirect_uris=allowed_client_redirect_uris,
         valid_scopes=scopes or None,
-        token_endpoint_auth_method="client_secret_post",
+        token_endpoint_auth_method="client_secret_post",  # noqa: S106
         extra_token_params={
             "client_id": client_id,
             "client_secret": client_secret,

@@ -10,7 +10,6 @@ when available.
 from __future__ import annotations
 
 import time
-from typing import Any
 
 from fastmcp.server.auth.auth import TokenVerifier
 from fastmcp.server.auth.oauth_proxy import AccessToken

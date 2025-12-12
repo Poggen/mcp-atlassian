@@ -5,6 +5,11 @@ repos:
     -   id: trailing-whitespace
     -   id: end-of-file-fixer
     -   id: check-yaml
+        exclude: |
+            (?x)^(
+              infrastructure/stages/[^/]+/templates/.*|
+              infrastructure/stages/[^/]+/dependencies/[^/]+/templates/.*
+            )$
     -   id: check-added-large-files
     -   id: check-toml
     -   id: debug-statements
@@ -24,6 +29,7 @@ repos:
     rev: v1.8.0
     hooks:
     -   id: mypy
+        pass_filenames: false
         # TODO: Fix these type errors in future PRs:
         # - Union-attr errors in server.py (None checks needed)
         # - Index error in jira_mocks.py (tests/fixtures/jira_mocks.py:421)
@@ -43,6 +49,7 @@ repos:
             "--disable-error-code=var-annotated",
             "--disable-error-code=no-untyped-def",
             "--disable-error-code=annotation-unchecked",
+            "apps/mcp-atlassian/src/mcp_atlassian",
         ]
         additional_dependencies: [
             'types-beautifulsoup4',
