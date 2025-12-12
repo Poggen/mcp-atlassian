@@ -25,6 +25,7 @@ from mcp_atlassian.confluence import ConfluenceFetcher
 from mcp_atlassian.confluence.config import ConfluenceConfig
 from mcp_atlassian.jira import JiraFetcher
 from mcp_atlassian.jira.config import JiraConfig
+from mcp_atlassian.servers.company_knowledge import register_company_knowledge_tools
 from mcp_atlassian.storage import JetStreamKVStore
 from mcp_atlassian.utils.environment import get_available_services
 from mcp_atlassian.utils.io import is_read_only_mode
@@ -466,6 +467,7 @@ main_mcp = AtlassianMCP(
     lifespan=main_lifespan,
     auth=_build_auth_provider(),
 )
+register_company_knowledge_tools(main_mcp)
 main_mcp.add_middleware(OpenTelemetryMiddleware())
 main_mcp.mount(jira_mcp, "jira")
 main_mcp.mount(confluence_mcp, "confluence")
