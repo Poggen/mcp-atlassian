@@ -2,3 +2,149 @@
 DRV_SYSTEM = "mcp-atlassian"
 DRV_VERTICAL_ID = "d1db59e"
 DRV_PERSISTENCE_ENABLED = "false" # string
+MISE_PROJECT_ROOT = "{{config_root}}"
+PRELOAD_IMAGES = "alpine:3.20"
+
+[tasks."1password:install"]
+description = "Install 1Password Connect + operator in the current cluster"
+run = '''
+set -e
+
+strip_quotes() {
+  echo "$1" | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//"
+}
+
+CHART_DIR="$MISE_PROJECT_ROOT/infrastructure/stages/local/dependencies/1password"
+RELEASE_NAME=""
+NAMESPACE=""
+CHART_INSTALL=""
+
+OP_CREDENTIALS_FILE=${OP_CREDENTIALS_FILE:-""}
+OP_CREDENTIALS_PATH=${OP_CREDENTIALS_PATH:-""}
+OP_OPERATOR_TOKEN=${OP_OPERATOR_TOKEN:-""}
+OP_OPERATOR_TOKEN_PATH=${OP_OPERATOR_TOKEN_PATH:-""}
+
+OP_CREDENTIALS_FILE=$(strip_quotes "$OP_CREDENTIALS_FILE")
+OP_CREDENTIALS_PATH=$(strip_quotes "$OP_CREDENTIALS_PATH")
+OP_OPERATOR_TOKEN=$(strip_quotes "$OP_OPERATOR_TOKEN")
+OP_OPERATOR_TOKEN_PATH=$(strip_quotes "$OP_OPERATOR_TOKEN_PATH")
+
+existing_ns=$(helm list -A 2>/dev/null | awk 'NR>1 && $1=="1password"{print $2; exit}')
+if [ -n "$existing_ns" ]; then
+  RELEASE_NAME="1password"
+  NAMESPACE="$existing_ns"
+  CHART_INSTALL="$CHART_DIR"
+else
+  existing_ns=$(helm list -A 2>/dev/null | awk 'NR>1 && $1=="connect"{print $2; exit}')
+  if [ -n "$existing_ns" ]; then
+    RELEASE_NAME="connect"
+    NAMESPACE="$existing_ns"
+    CHART_INSTALL="1password/connect"
+  fi
+fi
+
+if [ -z "$RELEASE_NAME" ]; then
+  RELEASE_NAME=$(kubectl get clusterrole onepassword-connect-operator -o jsonpath='{.metadata.annotations.meta\.helm\.sh/release-name}' 2>/dev/null || true)
+  NAMESPACE=$(kubectl get clusterrole onepassword-connect-operator -o jsonpath='{.metadata.annotations.meta\.helm\.sh/release-namespace}' 2>/dev/null || true)
+  RELEASE_NAME=$(strip_quotes "$RELEASE_NAME")
+  NAMESPACE=$(strip_quotes "$NAMESPACE")
+  if [ -n "$RELEASE_NAME" ] && [ -n "$NAMESPACE" ]; then
+    if [ "$RELEASE_NAME" = "connect" ]; then
+      CHART_INSTALL="1password/connect"
+    else
+      CHART_INSTALL="$CHART_DIR"
+    fi
+  fi
+fi
+
+if [ -z "$RELEASE_NAME" ]; then
+  RELEASE_NAME="1password"
+  NAMESPACE="1password-operator"
+  CHART_INSTALL="$CHART_DIR"
+fi
+
+if [ -z "$OP_CREDENTIALS_FILE" ] && [ -f "$MISE_PROJECT_ROOT/1password-credentials.json" ]; then
+  OP_CREDENTIALS_FILE="$MISE_PROJECT_ROOT/1password-credentials.json"
+fi
+
+TEMP_CREDENTIALS_FILE=$(mktemp)
+cleanup() {
+  if [ -f "$TEMP_CREDENTIALS_FILE" ]; then
+    rm -f "$TEMP_CREDENTIALS_FILE"
+  fi
+}
+trap cleanup EXIT
+
+need_op=false
+if [ -z "$OP_OPERATOR_TOKEN" ] || [ -z "$OP_CREDENTIALS_FILE" ]; then
+  need_op=true
+fi
+
+if [ "$need_op" = true ]; then
+  if ! command -v op >/dev/null 2>&1; then
+    echo "Error: 1Password CLI (op) is not installed or not in PATH"
+    exit 1
+  fi
+fi
+
+if [ -z "$OP_OPERATOR_TOKEN" ]; then
+  while [ -z "$OP_OPERATOR_TOKEN_PATH" ]; do
+    echo "Enter 1Password path for operator token (e.g., op://vault/item/field):"
+    read -r OP_OPERATOR_TOKEN_PATH
+    OP_OPERATOR_TOKEN_PATH=$(strip_quotes "$OP_OPERATOR_TOKEN_PATH")
+  done
+
+  OPERATOR_CREDENTIALS=$(op read "$OP_OPERATOR_TOKEN_PATH")
+  if [ $? -ne 0 ] || [ -z "$OPERATOR_CREDENTIALS" ]; then
+    echo "Error: Failed to read operator token from $OP_OPERATOR_TOKEN_PATH"
+    exit 1
+  fi
+else
+  OPERATOR_CREDENTIALS="$OP_OPERATOR_TOKEN"
+fi
+
+if [ -z "$OP_CREDENTIALS_FILE" ]; then
+  while [ -z "$OP_CREDENTIALS_PATH" ]; do
+    echo "Enter 1Password path for credentials file (e.g., op://vault/item/credentials.json):"
+    read -r OP_CREDENTIALS_PATH
+    OP_CREDENTIALS_PATH=$(strip_quotes "$OP_CREDENTIALS_PATH")
+  done
+
+  op read --force --out-file "$TEMP_CREDENTIALS_FILE" "$OP_CREDENTIALS_PATH"
+  if [ $? -ne 0 ]; then
+    echo "Error: Failed to read credentials from $OP_CREDENTIALS_PATH"
+    exit 1
+  fi
+  OP_CREDENTIALS_FILE="$TEMP_CREDENTIALS_FILE"
+fi
+
+if [ ! -f "$OP_CREDENTIALS_FILE" ]; then
+  echo "Error: Credentials file not found: $OP_CREDENTIALS_FILE"
+  exit 1
+fi
+
+helm dependency update "$CHART_DIR"
+helm dependency build "$CHART_DIR"
+mise d:kind:load:image:all "$CHART_DIR"
+
+kubectl create namespace "$NAMESPACE" 2>/dev/null || true
+
+helm repo add 1password https://1password.github.io/connect-helm-charts/ || true
+if [ "$CHART_INSTALL" = "$CHART_DIR" ]; then
+  CREDENTIALS_KEY="connect.connect.credentials"
+  OPERATOR_PREFIX="connect.operator"
+else
+  CREDENTIALS_KEY="connect.credentials"
+  OPERATOR_PREFIX="operator"
+fi
+
+helm upgrade --install "$RELEASE_NAME" "$CHART_INSTALL" \
+  --set-file "${CREDENTIALS_KEY}=${OP_CREDENTIALS_FILE}" \
+  --set "${OPERATOR_PREFIX}.create=true" \
+  --set-string "${OPERATOR_PREFIX}.token.value=${OPERATOR_CREDENTIALS}" \
+  -n "$NAMESPACE" \
+  --create-namespace
+
+kubectl wait --for=condition=Ready pod -l app.kubernetes.io/component=connect -n "$NAMESPACE" --timeout=180s || true
+kubectl wait --for=condition=Ready pod -l app.kubernetes.io/component=operator -n "$NAMESPACE" --timeout=180s || true
+'''

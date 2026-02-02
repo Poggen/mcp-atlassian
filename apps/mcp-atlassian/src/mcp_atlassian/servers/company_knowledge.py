@@ -48,7 +48,9 @@ def _jira_browse_url(base_url: str, issue_key: str) -> str:
     return f"{base_url.rstrip('/')}/browse/{issue_key}"
 
 
-def _confluence_page_url(base_url: str, is_cloud: bool, page_id: str, space_key: str) -> str:
+def _confluence_page_url(
+    base_url: str, is_cloud: bool, page_id: str, space_key: str
+) -> str:
     base = base_url.rstrip("/")
     if is_cloud:
         return f"{base}/spaces/{space_key}/pages/{page_id}"
@@ -247,4 +249,3 @@ def register_company_knowledge_tools(mcp: FastMCP[Any]) -> None:
             "metadata": {"source": "confluence", "page_id": str(page_id)},
         }
         return json.dumps(result, ensure_ascii=False)
-

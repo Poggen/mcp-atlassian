@@ -19,12 +19,8 @@ from mcp_atlassian.confluence.config import ConfluenceConfig
 from mcp_atlassian.jira import JiraFetcher
 from mcp_atlassian.jira.config import JiraConfig
 from mcp_atlassian.servers.context import MainAppContext
-from mcp_atlassian.servers.main import (
-    AtlassianMCP,
-    UserTokenMiddleware,
-    health_check,
-    main_lifespan,
-)
+from mcp_atlassian.servers.main import AtlassianMCP, health_check, main_lifespan
+from mcp_atlassian.servers.middleware import UserTokenMiddleware
 from tests.utils.factories import (
     ConfluencePageFactory,
     JiraIssueFactory,

@@ -868,6 +868,31 @@ type %APPDATA%\Claude\logs\mcp*.log | more
 - Keep .env files secure and private
 - See [SECURITY.md](SECURITY.md) for best practices
 
+### Drive secrets (for Drive deployments)
+
+Drive injects secrets via External Secrets; update them using `drv`.
+
+Secrets used:
+- `mcp-atlassian-storage`: `JWT_SIGNING_KEY`, `STORAGE_ENCRYPTION_KEY`
+- `mcp-atlassian-oauth`: `JIRA_OAUTH_CLIENT_ID`, `JIRA_OAUTH_CLIENT_SECRET`,
+  `CONFLUENCE_OAUTH_CLIENT_ID`, `CONFLUENCE_OAUTH_CLIENT_SECRET`
+
+Update example:
+```bash
+echo '{"JWT_SIGNING_KEY":"...","STORAGE_ENCRYPTION_KEY":"..."}' | \
+  drv secret apply --name mcp-atlassian-storage --stage <stage>
+
+echo '{"JIRA_OAUTH_CLIENT_ID":"...","JIRA_OAUTH_CLIENT_SECRET":"..."}' | \
+  drv secret apply --name mcp-atlassian-oauth --stage <stage>
+```
+
+### OAuth DCR hardening
+
+Environment variables:
+- `ATLASSIAN_OAUTH_ALLOWED_CLIENT_REDIRECT_URIS` (comma-separated). Defaults to localhost + ChatGPT redirect URIs.
+- `ATLASSIAN_OAUTH_ALLOWED_GRANT_TYPES` (comma-separated). Defaults to `authorization_code,refresh_token`.
+- `ATLASSIAN_OAUTH_REQUIRE_CONSENT` (`true`/`false`, default `true`).
+
 ## Contributing
 
 We welcome contributions to MCP Atlassian! If you'd like to contribute:

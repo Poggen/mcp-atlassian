@@ -62,13 +62,21 @@ drive:
         STORAGE_DEFAULT_COLLECTION: registrations
         JWT_SIGNING_KEY: "dev-jwt-signing-key-change-me"
         STORAGE_ENCRYPTION_KEY: "f8XkS6zWIZ2shB_QhSiaY9hjiawR1C0tqJg8PJo3lqA="
-        ATLASSIAN_OAUTH_CLIENT_ID: "CHANGE_ME"
-        ATLASSIAN_OAUTH_CLIENT_SECRET: "CHANGE_ME"
         ATLASSIAN_OAUTH_SCOPE: "READ"
+        ATLASSIAN_OAUTH_ALLOWED_CLIENT_REDIRECT_URIS: "http://localhost:*,http://127.0.0.1:*"
+        ATLASSIAN_OAUTH_ALLOWED_GRANT_TYPES: "authorization_code,refresh_token"
+        ATLASSIAN_OAUTH_REQUIRE_CONSENT: "true"
         ATLASSIAN_OAUTH_INSTANCE_TYPE: "datacenter"
         ATLASSIAN_OAUTH_INSTANCE_URL: "https://wcar-jira-test.riada.se"
         ATLASSIAN_OAUTH_REDIRECT_URI: "http://localhost:3000/callback"
         ATLASSIAN_OAUTH_ENABLE: "true"
+      secretEnv:
+        ATLASSIAN_OAUTH_CLIENT_ID:
+          secretName: mcp-atlassian-oauth
+          secretKey: JIRA_OAUTH_CLIENT_ID
+        ATLASSIAN_OAUTH_CLIENT_SECRET:
+          secretName: mcp-atlassian-oauth
+          secretKey: JIRA_OAUTH_CLIENT_SECRET
       probes:
         liveness: /healthz
         readiness: /healthz
@@ -117,13 +125,21 @@ drive:
       STORAGE_DEFAULT_COLLECTION: registrations
       JWT_SIGNING_KEY: "dev-jwt-signing-key-change-me"
       STORAGE_ENCRYPTION_KEY: "f8XkS6zWIZ2shB_QhSiaY9hjiawR1C0tqJg8PJo3lqA="
-      ATLASSIAN_OAUTH_CLIENT_ID: "CHANGE_ME"
-      ATLASSIAN_OAUTH_CLIENT_SECRET: "CHANGE_ME"
       ATLASSIAN_OAUTH_SCOPE: "READ"
+      ATLASSIAN_OAUTH_ALLOWED_CLIENT_REDIRECT_URIS: "http://localhost:*,http://127.0.0.1:*"
+      ATLASSIAN_OAUTH_ALLOWED_GRANT_TYPES: "authorization_code,refresh_token"
+      ATLASSIAN_OAUTH_REQUIRE_CONSENT: "true"
       ATLASSIAN_OAUTH_INSTANCE_TYPE: "datacenter"
       ATLASSIAN_OAUTH_INSTANCE_URL: "https://wcar-confluence-test.riada.se"
       ATLASSIAN_OAUTH_REDIRECT_URI: "http://localhost:3000/callback"
       ATLASSIAN_OAUTH_ENABLE: "true"
+    secretEnv:
+      ATLASSIAN_OAUTH_CLIENT_ID:
+        secretName: mcp-atlassian-oauth
+        secretKey: CONFLUENCE_OAUTH_CLIENT_ID
+      ATLASSIAN_OAUTH_CLIENT_SECRET:
+        secretName: mcp-atlassian-oauth
+        secretKey: CONFLUENCE_OAUTH_CLIENT_SECRET
     probes:
       liveness: /healthz
       readiness: /healthz

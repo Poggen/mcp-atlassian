@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mcp-atlassian
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --frozen --all-extras --dev
+
+      - name: Lint, format, and typecheck
+        run: uv run pre-commit run --all-files
+
+      - name: Run tests
+        run: uv run pytest
+
+  dependabot-automerge:
+    if: ${{ github.actor == 'dependabot[bot]' }}
+    needs: lint-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enable auto-merge for patch and minor updates
+        if: >-
+          ${{
+            steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
+            steps.metadata.outputs.update-type == 'version-update:semver-minor'
+          }}
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

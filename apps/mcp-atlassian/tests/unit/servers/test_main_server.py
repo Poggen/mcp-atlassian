@@ -7,7 +7,8 @@ import pytest
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-from mcp_atlassian.servers.main import UserTokenMiddleware, main_mcp
+from mcp_atlassian.servers.main import main_mcp
+from mcp_atlassian.servers.middleware import UserTokenMiddleware
 
 
 @pytest.mark.anyio

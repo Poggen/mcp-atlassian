@@ -1,0 +1,8 @@
+apiVersion: v2
+name: 1password
+description: 1Password Connect for Drive
+version: 0.0.1
+dependencies:
+  - name: connect
+    repository: https://1password.github.io/connect-helm-charts/
+    version: 1.17.1

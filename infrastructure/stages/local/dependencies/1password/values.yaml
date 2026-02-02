@@ -1,0 +1,5 @@
+connect:
+  # Credentials will be set through the command line when installing
+  operator:
+    create: true
+    # Token will be set through the command line when installing
