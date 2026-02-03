@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from cachetools import TTLCache
 from fastmcp import settings as fastmcp_settings
@@ -23,9 +23,7 @@ token_validation_cache: TTLCache[
 class UserTokenMiddleware(BaseHTTPMiddleware):
     """Middleware to extract Atlassian user tokens/credentials from Authorization headers."""
 
-    def __init__(
-        self, app: Any, mcp_server_ref: Optional[Any] = None
-    ) -> None:
+    def __init__(self, app: Any, mcp_server_ref: Any | None = None) -> None:
         super().__init__(app)
         self.mcp_server_ref = mcp_server_ref
         if not self.mcp_server_ref:

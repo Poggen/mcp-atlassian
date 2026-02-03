@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Iterable
+from collections.abc import Iterable
 
 from fastmcp.server.auth.oauth_proxy import OAuthProxy
 from mcp.server.auth.provider import OAuthClientInformationFull
@@ -36,7 +36,7 @@ class HardenedOAuthProxy(OAuthProxy):
         *,
         allowed_grant_types: list[str] | None = None,
         forced_scopes: list[str] | None = None,
-        **kwargs,
+        **kwargs: object,
     ) -> None:
         super().__init__(**kwargs)
         self._allowed_grant_types = _normalize_list(allowed_grant_types)

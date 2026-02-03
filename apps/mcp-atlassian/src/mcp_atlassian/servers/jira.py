@@ -2,7 +2,6 @@
 
 import json
 import logging
-import re
 from typing import Annotated, Any
 
 from fastmcp import Context
@@ -204,7 +203,7 @@ async def search(
         Field(
             description=(
                 "Alias for `jql`. If this is a plain text search string, it will be "
-                "wrapped as a JQL text search (e.g. `text ~ \"...\"`)."
+                'wrapped as a JQL text search (e.g. `text ~ "..."`).'
             ),
             default=None,
         ),
