@@ -81,6 +81,10 @@ AUTH_URL="${AUTH_ENDPOINT}?response_type=code&client_id=${CLIENT_ID}&redirect_ur
 echo -e "${YELLOW}Open this URL in your browser:${NC}"
 echo "${AUTH_URL}"
 echo
+echo -e "${YELLOW}agent-browser (headless/default):${NC} agent-browser open \"${AUTH_URL}\""
+echo -e "${YELLOW}agent-browser (headed/manual):${NC} agent-browser --headed open \"${AUTH_URL}\""
+echo -e "${YELLOW}Extract code from error page:${NC} agent-browser get text body | rg -n \"reloadUrl\" -m 1"
+echo
 
 echo -e "${YELLOW}After login, copy the authorization code from the callback URL${NC}"
 read -p "Enter the authorization code: " AUTH_CODE
