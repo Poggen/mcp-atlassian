@@ -467,6 +467,37 @@ async def test_search(jira_client, mock_jira_fetcher):
 
 
 @pytest.mark.anyio
+async def test_search_accepts_query_alias(jira_client, mock_jira_fetcher):
+    """Test the search tool accepts query alias and converts plain text."""
+    response = (
+        await jira_client.call_tool(
+            "jira_search",
+            {
+                "query": "login failure",
+                "fields": "summary",
+                "limit": 1,
+                "start_at": 0,
+            },
+        )
+    ).content
+    assert isinstance(response, list)
+    assert len(response) > 0
+    text_content = response[0]
+    assert text_content.type == "text"
+    content = json.loads(text_content.text)
+    assert isinstance(content, dict)
+    assert "issues" in content
+    mock_jira_fetcher.search_issues.assert_called_once_with(
+        jql='text ~ "login failure" ORDER BY updated DESC',
+        fields=["summary"],
+        limit=1,
+        start=0,
+        projects_filter=None,
+        expand=None,
+    )
+
+
+@pytest.mark.anyio
 async def test_create_issue(jira_client, mock_jira_fetcher):
     """Test the create_issue tool with fixture data."""
     response = (

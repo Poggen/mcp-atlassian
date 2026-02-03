@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 from typing import Annotated, Any
 
 from fastmcp import Context
@@ -20,6 +21,20 @@ logger = logging.getLogger(__name__)
 jira_mcp = AtlassianFastMCP(
     name="Jira MCP Service",
 )
+
+_JQL_MARKERS = ["=", "~", ">", "<", " AND ", " OR ", " ORDER BY ", "currentUser()"]
+
+
+def _looks_like_jql(query: str) -> bool:
+    q = query.strip()
+    if not q:
+        return False
+    q_upper = q.upper()
+    return any(marker in q_upper for marker in _JQL_MARKERS)
+
+
+def _escape_jql_string(value: str) -> str:
+    return value.replace('"', '\\"')
 
 
 @jira_mcp.tool(tags={"jira", "read"})
@@ -168,10 +183,11 @@ async def get_issue(
 @jira_mcp.tool(tags={"jira", "read"})
 async def search(
     jql: Annotated[
-        str,
+        str | None,
         Field(
             description=(
-                "JQL query string (Jira Query Language). Examples:\n"
+                "JQL query string (Jira Query Language). Alias: `query`.\n"
+                "Examples:\n"
                 '- Find Epics: "issuetype = Epic AND project = PROJ"\n'
                 '- Find issues in Epic: "parent = PROJ-123"\n'
                 "- Find by status: \"status = 'In Progress' AND project = PROJ\"\n"
@@ -179,9 +195,20 @@ async def search(
                 '- Find recently updated: "updated >= -7d AND project = PROJ"\n'
                 '- Find by label: "labels = frontend AND project = PROJ"\n'
                 '- Find by priority: "priority = High AND project = PROJ"'
-            )
+            ),
+            default=None,
         ),
-    ],
+    ] = None,
+    query: Annotated[
+        str | None,
+        Field(
+            description=(
+                "Alias for `jql`. If this is a plain text search string, it will be "
+                "wrapped as a JQL text search (e.g. `text ~ \"...\"`)."
+            ),
+            default=None,
+        ),
+    ] = None,
     fields: Annotated[
         str,
         Field(
@@ -226,7 +253,8 @@ async def search(
 
     Args:
         ctx: The FastMCP context.
-        jql: JQL query string.
+        jql: JQL query string. Alias: query.
+        query: Alias for jql. Plain text will be wrapped as a JQL text search.
         fields: Comma-separated fields to return.
         limit: Maximum number of results.
         start_at: Starting index for pagination.
@@ -237,12 +265,22 @@ async def search(
         JSON string representing the search results including pagination info.
     """
     jira = await get_jira_fetcher(ctx)
+    jql_query = jql or query
+    if not jql_query:
+        raise ValueError("JQL query is required (use `jql` or `query`).")
+
+    if _looks_like_jql(jql_query):
+        normalized_jql = jql_query.strip()
+    else:
+        escaped = _escape_jql_string(jql_query.strip())
+        normalized_jql = f'text ~ "{escaped}" ORDER BY updated DESC'
+
     fields_list: str | list[str] | None = fields
     if fields and fields != "*all":
         fields_list = [f.strip() for f in fields.split(",")]
 
     search_result = jira.search_issues(
-        jql=jql,
+        jql=normalized_jql,
         fields=fields_list,
         limit=limit,
         start=start_at,

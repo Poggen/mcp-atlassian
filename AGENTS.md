@@ -100,3 +100,6 @@
 
 #### Guidelines
 - Prefer deterministic, non-interactive commands (`head`, `--filter`, `--json` + `jq`) so runs are reproducible
+
+## Notes
+- OAuth/MCP smoke test (Jira): use agent-browser to open `/authorize` URL, click "Allow" on Jira consent, then extract `code` from the `127.0.0.1:8080/authorization-code/callback` error page body. Exchange code at `/token` with PKCE verifier, call MCP `initialize`, then `tools/list`, then `tools/call` (e.g. `search` or `jira_search` with `jql`). Codes are one-time use; regenerate auth URL + verifier for each run.
