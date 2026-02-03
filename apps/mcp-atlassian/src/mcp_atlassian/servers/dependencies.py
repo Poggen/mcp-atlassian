@@ -197,6 +197,7 @@ def _create_user_config_for_fetcher(
             base_config, **common_args
         )
         user_jira_config.projects_filter = base_config.projects_filter
+        user_jira_config.projects_exclude = base_config.projects_exclude
         return user_jira_config
     elif isinstance(base_config, ConfluenceConfig):
         user_confluence_config: UserConfluenceConfigType = dataclasses.replace(

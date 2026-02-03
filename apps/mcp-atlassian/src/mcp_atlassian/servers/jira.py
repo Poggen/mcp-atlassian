@@ -1595,6 +1595,17 @@ async def get_all_projects(
             if project.get("key") in allowed_project_keys
         ]
 
+    # Apply project exclusions if configured
+    if jira.config.projects_exclude:
+        excluded_project_keys = {
+            p.strip().upper() for p in jira.config.projects_exclude.split(",") if p
+        }
+        projects = [
+            project
+            for project in projects
+            if project.get("key") not in excluded_project_keys
+        ]
+
     return json.dumps(projects, indent=2, ensure_ascii=False)
 
 

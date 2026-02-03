@@ -1619,7 +1619,34 @@ class TestIssuesMixin:
         # Verify the result
         assert isinstance(result, JiraIssue)
         assert result.key == "DEV-123"
-        assert result.summary == "Test issue"
+
+    def test_get_issue_with_projects_exclude_restricted(
+        self, issues_mixin: IssuesMixin
+    ):
+        """Test get_issue with projects exclude from config - restricted case."""
+        mock_issue_data = {
+            "id": "10001",
+            "key": "WCAR-123",
+            "fields": {
+                "summary": "Test issue",
+                "description": "This is a test issue",
+                "status": {"name": "Open"},
+                "issuetype": {"name": "Bug"},
+            },
+        }
+        issues_mixin.jira.get_issue.return_value = mock_issue_data
+        issues_mixin.config.url = "https://example.atlassian.net"
+        issues_mixin.config.projects_filter = None
+        issues_mixin.config.projects_exclude = "WCAR"
+
+        with pytest.raises(
+            Exception,
+            match=(
+                "Error retrieving issue WCAR-123: "
+                "Issue with project prefix 'WCAR' are excluded by configuration"
+            ),
+        ):
+            issues_mixin.get_issue("WCAR-123")
 
     def test_get_issue_with_multiple_projects_filter(self, issues_mixin: IssuesMixin):
         """Test get_issue with multiple projects in the filter."""

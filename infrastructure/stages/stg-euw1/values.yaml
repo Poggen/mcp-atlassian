@@ -71,6 +71,7 @@ drive:
         MCP_LOGGING_STDOUT: "true"
         READ_ONLY_MODE: "true"
         JIRA_URL: "https://wcar-jira-test.riada.se"
+        JIRA_PROJECTS_EXCLUDE: "WCAR"
         STORAGE_BACKEND: jetstream
         STORAGE_BUCKET_PREFIX: mcp-client-
         STORAGE_DEFAULT_COLLECTION: registrations

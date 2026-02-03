@@ -915,6 +915,48 @@ async def test_get_all_projects_tool_with_projects_filter(
 
 
 @pytest.mark.anyio
+async def test_get_all_projects_tool_with_projects_exclude(
+    jira_client, mock_jira_fetcher
+):
+    """Test the jira_get_all_projects tool respects project exclusion configuration."""
+    all_mock_projects = [
+        {
+            "id": "10000",
+            "key": "PROJ1",
+            "name": "Project One",
+        },
+        {
+            "id": "10001",
+            "key": "WCAR",
+            "name": "Excluded Project",
+        },
+    ]
+
+    mock_jira_fetcher.get_all_projects.reset_mock()
+    mock_jira_fetcher.get_all_projects.side_effect = (
+        lambda include_archived=False: all_mock_projects
+    )
+    mock_jira_fetcher.config.projects_filter = None
+    mock_jira_fetcher.config.projects_exclude = "WCAR"
+
+    response = (await jira_client.call_tool("jira_get_all_projects", {})).content
+
+    assert isinstance(response, list)
+    assert len(response) == 1
+    msg = response[0]
+    assert msg.type == "text"
+
+    data = json.loads(msg.text)
+    assert isinstance(data, list)
+    assert len(data) == 1
+    returned_keys = [project["key"] for project in data]
+    assert "PROJ1" in returned_keys
+    assert "WCAR" not in returned_keys
+
+    mock_jira_fetcher.get_all_projects.assert_called_once_with(include_archived=False)
+
+
+@pytest.mark.anyio
 async def test_get_all_projects_tool_no_projects_filter(jira_client, mock_jira_fetcher):
     """Test the jira_get_all_projects tool returns all projects when no filter is configured."""
     # Prepare mock project data

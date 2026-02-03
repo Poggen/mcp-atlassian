@@ -63,23 +63,31 @@ class IssuesMixin(
             Exception: If there is an error retrieving the issue
         """
         try:
-            # Obtain the projects filter from the config.
+            # Obtain the projects filter/exclude from the config.
             # These should NOT be overridden by the request.
             filter_to_use = self.config.projects_filter
+            exclude_to_use = self.config.projects_exclude
+
+            # Obtain the project key from issue_key
+            issue_key_project = issue_key.split("-")[0]
 
             # Apply projects filter if present
             if filter_to_use:
-                # Split projects filter by commas and handle possible whitespace
-                projects = [p.strip() for p in filter_to_use.split(",")]
-
-                # Obtain the project key from issue_key
-                issue_key_project = issue_key.split("-")[0]
-
+                projects = [p.strip() for p in filter_to_use.split(",") if p.strip()]
                 if issue_key_project not in projects:
-                    # If the project key not in the filter, return an empty issue
                     msg = (
                         "Issue with project prefix "
                         f"'{issue_key_project}' are restricted by configuration"
+                    )
+                    raise ValueError(msg)
+
+            # Apply excluded projects if present
+            if exclude_to_use:
+                excluded = [p.strip() for p in exclude_to_use.split(",") if p.strip()]
+                if issue_key_project in excluded:
+                    msg = (
+                        "Issue with project prefix "
+                        f"'{issue_key_project}' are excluded by configuration"
                     )
                     raise ValueError(msg)
 

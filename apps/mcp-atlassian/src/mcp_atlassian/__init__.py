@@ -110,6 +110,10 @@ logger = setup_logging(logging_level, logging_stream)
     help="Comma-separated list of Jira project keys to filter search results",
 )
 @click.option(
+    "--jira-projects-exclude",
+    help="Comma-separated list of Jira project keys to exclude from search results",
+)
+@click.option(
     "--read-only",
     is_flag=True,
     help="Run in read-only mode (disables all write operations)",
@@ -163,6 +167,7 @@ def main(
     jira_personal_token: str | None,
     jira_ssl_verify: bool,
     jira_projects_filter: str | None,
+    jira_projects_exclude: str | None,
     read_only: bool,
     enabled_tools: str | None,
     oauth_client_id: str | None,
@@ -307,6 +312,8 @@ def main(
         os.environ["JIRA_SSL_VERIFY"] = str(jira_ssl_verify).lower()
     if click_ctx and was_option_provided(click_ctx, "jira_projects_filter"):
         os.environ["JIRA_PROJECTS_FILTER"] = jira_projects_filter
+    if click_ctx and was_option_provided(click_ctx, "jira_projects_exclude"):
+        os.environ["JIRA_PROJECTS_EXCLUDE"] = jira_projects_exclude
 
     from mcp_atlassian.servers import main_mcp
 

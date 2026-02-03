@@ -346,10 +346,31 @@ class TestSearchMixin:
         assert len(result.issues) == 1
         assert result.total == 1
 
-        # Test with override
-        result = search_mixin.search_issues("text ~ 'test'", projects_filter="OVERRIDE")
+    def test_search_issues_with_projects_exclude(self, search_mixin: SearchMixin):
+        """Test search with projects exclude from config."""
+        mock_issues = {
+            "issues": [
+                {
+                    "id": "10001",
+                    "key": "TEST-123",
+                    "fields": {
+                        "summary": "Test issue",
+                        "issuetype": {"name": "Bug"},
+                        "status": {"name": "Open"},
+                    },
+                }
+            ],
+            "total": 1,
+            "startAt": 0,
+            "maxResults": 50,
+        }
+        search_mixin.jira.jql.return_value = mock_issues
+        search_mixin.config.url = "https://example.atlassian.net"
+        search_mixin.config.projects_exclude = "WCAR,TEST"
+
+        result = search_mixin.search_issues("text ~ 'test'")
         search_mixin.jira.jql.assert_called_with(
-            "(text ~ 'test') AND project = \"OVERRIDE\"",
+            '(text ~ \'test\') AND project NOT IN ("WCAR", "TEST")',
             fields=ANY,
             start=0,
             limit=50,
@@ -363,7 +384,7 @@ class TestSearchMixin:
             "text ~ 'test'", projects_filter="OVER1,OVER2"
         )
         search_mixin.jira.jql.assert_called_with(
-            '(text ~ \'test\') AND project IN ("OVER1", "OVER2")',
+            '((text ~ \'test\') AND project IN ("OVER1", "OVER2")) AND project NOT IN ("WCAR", "TEST")',
             fields=ANY,
             start=0,
             limit=50,

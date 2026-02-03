@@ -15,6 +15,30 @@ from .protocols import IssueOperationsProto
 logger = logging.getLogger("mcp-jira")
 
 
+def _normalize_project_keys(raw: str) -> list[str]:
+    return [p.strip() for p in raw.split(",") if p.strip()]
+
+
+def _build_project_clause(projects: list[str], *, exclude: bool) -> str:
+    if len(projects) == 1:
+        op = "!=" if exclude else "="
+        return f'project {op} "{projects[0]}"'
+
+    quoted_projects = [f'"{p}"' for p in projects]
+    projects_list = ", ".join(quoted_projects)
+    op = "NOT IN" if exclude else "IN"
+    return f"project {op} ({projects_list})"
+
+
+def _append_jql_clause(jql: str | None, clause: str) -> str:
+    if not jql:
+        return clause
+    stripped = jql.strip()
+    if stripped.upper().startswith("ORDER BY"):
+        return f"{clause} {stripped}"
+    return f"({stripped}) AND {clause}"
+
+
 class SearchMixin(JiraClient, IssueOperationsProto):
     """Mixin for Jira search operations."""
 
@@ -53,29 +77,25 @@ class SearchMixin(JiraClient, IssueOperationsProto):
 
             # Apply projects filter if present
             if filter_to_use:
-                # Split projects filter by commas and handle possible whitespace
-                projects = [p.strip() for p in filter_to_use.split(",")]
+                projects = _normalize_project_keys(filter_to_use)
+                project_query = _build_project_clause(projects, exclude=False)
 
-                # Build the project filter query part
-                if len(projects) == 1:
-                    project_query = f'project = "{projects[0]}"'
-                else:
-                    quoted_projects = [f'"{p}"' for p in projects]
-                    projects_list = ", ".join(quoted_projects)
-                    project_query = f"project IN ({projects_list})"
-
-                # Add the project filter to existing query
                 if not jql:
-                    # Empty JQL - just use project filter
                     jql = project_query
                 elif jql.strip().upper().startswith("ORDER BY"):
-                    # JQL starts with ORDER BY - prepend project filter
                     jql = f"{project_query} {jql}"
                 elif "project = " not in jql and "project IN" not in jql:
-                    # Only add if not already filtering by project
                     jql = f"({jql}) AND {project_query}"
 
-                logger.info(f"Applied projects filter to query: {jql}")
+                logger.info("Applied projects filter to query: %s", jql)
+
+            # Apply excluded projects (always enforced from config)
+            if self.config.projects_exclude:
+                excluded = _normalize_project_keys(self.config.projects_exclude)
+                if excluded:
+                    exclude_query = _build_project_clause(excluded, exclude=True)
+                    jql = _append_jql_clause(jql, exclude_query)
+                    logger.info("Applied excluded projects to query: %s", jql)
 
             # Convert fields to proper format if it's a list/tuple/set
             fields_param: str | None
