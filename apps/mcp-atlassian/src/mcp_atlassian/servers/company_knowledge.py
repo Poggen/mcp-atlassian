@@ -39,6 +39,17 @@ def _looks_like_jql(query: str) -> bool:
     return any(marker in q_upper for marker in jql_markers)
 
 
+def _looks_like_cql(query: str) -> bool:
+    q = query.strip()
+    if not q:
+        return False
+
+    # Heuristic: treat queries containing typical CQL operators/clauses as CQL.
+    cql_markers = ["=", "~", ">", "<", " AND ", " OR ", "currentUser()"]
+    q_upper = q.upper()
+    return any(marker in q_upper for marker in cql_markers)
+
+
 def _escape_jql_string(value: str) -> str:
     # JQL uses double-quoted strings; escape embedded quotes.
     return value.replace('"', '\\"')
@@ -80,7 +91,15 @@ def register_company_knowledge_tools(mcp: FastMCP[Any]) -> None:
 
     @mcp.tool(tags={"company-knowledge", "read"})
     async def search(
-        query: Annotated[str, Field(description="Search query string.")],
+        query: Annotated[
+            str,
+            Field(
+                description=(
+                    "Search query string. For Confluence you may pass CQL; for Jira you may pass JQL. "
+                    "Plain text is supported and will be translated to a best-effort query."
+                )
+            ),
+        ],
         *,
         ctx: Context | None = None,
     ) -> str:
@@ -101,7 +120,20 @@ def register_company_knowledge_tools(mcp: FastMCP[Any]) -> None:
         # Confluence search (CQL or simple term).
         try:
             confluence = await get_confluence_fetcher(ctx)
-            pages = confluence.search(query, limit=per_source_limit)
+            if _looks_like_cql(query):
+                pages = confluence.search(query, limit=per_source_limit)
+            else:
+                original_query = query.strip()
+                try:
+                    cql = f'siteSearch ~ "{original_query}"'
+                    pages = confluence.search(cql, limit=per_source_limit)
+                except Exception:
+                    logger.debug(
+                        "Company Knowledge Confluence siteSearch failed; falling back to text search",
+                        exc_info=True,
+                    )
+                    cql = f'text ~ "{original_query}"'
+                    pages = confluence.search(cql, limit=per_source_limit)
             for page in pages:
                 page_id = getattr(page, "id", None)
                 title = getattr(page, "title", None)
