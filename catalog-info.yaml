@@ -9,9 +9,12 @@ metadata:
     github.com/project-slug: WDP-EarlyBirds/mcp-atlassian
     backstage.io/environment-urls: |
       {
-        "Development": "https://mcp-atlassian.gated.dev-euw1.d1db59e.drive-platform.com",
-        "Staging": "https://mcp-atlassian.gated.stg-euw1.d1db59e.drive-platform.com",
-        "Production": "https://mcp-atlassian.gated.prd-euw1.d1db59e.drive-platform.com"
+        "Development (Jira)": "https://mcp-atlassian.gated.dev-euw1.d1db59e.drive-platform.com/mcp-jira",
+        "Development (Confluence)": "https://mcp-atlassian.gated.dev-euw1.d1db59e.drive-platform.com/mcp-confluence",
+        "Staging (Jira)": "https://mcp-atlassian.gated.stg-euw1.d1db59e.drive-platform.com/mcp-jira",
+        "Staging (Confluence)": "https://mcp-atlassian.gated.stg-euw1.d1db59e.drive-platform.com/mcp-confluence",
+        "Production (Jira)": "https://mcp-atlassian.gated.prd-euw1.d1db59e.drive-platform.com/mcp-jira",
+        "Production (Confluence)": "https://mcp-atlassian.gated.prd-euw1.d1db59e.drive-platform.com/mcp-confluence"
       }
     drive.wirelesscar.com/delete-after: disabled
   links:
