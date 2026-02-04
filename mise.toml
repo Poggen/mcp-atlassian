@@ -148,3 +148,40 @@ helm upgrade --install "$RELEASE_NAME" "$CHART_INSTALL" \
 kubectl wait --for=condition=Ready pod -l app.kubernetes.io/component=connect -n "$NAMESPACE" --timeout=180s || true
 kubectl wait --for=condition=Ready pod -l app.kubernetes.io/component=operator -n "$NAMESPACE" --timeout=180s || true
 '''
+
+[tasks."d:app:update"]
+description = "Update an app in the kind cluster (build and load image if it has a Dockerfile). Defaults to the current directory name if no argument is provided."
+dir = "{{cwd}}"
+usage = '''
+    arg "<app_name>" default="unset" help="The app to update"
+'''
+run = '''
+    {% set usage_app_name = arg(name='app_name') | as_str %}
+    {% if usage_app_name == 'unset' %}
+        {% set usage_app_name = cwd | basename | as_str %}
+    {% endif %}
+
+    {% set docker_path = env.MISE_PROJECT_ROOT ~ env.PATH_SEPARATOR ~ "apps" ~ env.PATH_SEPARATOR ~ usage_app_name ~ env.PATH_SEPARATOR ~ "Dockerfile"%}
+    {% if not docker_path is exists %}
+        echo "No Dockerfile found in {{ docker_path }}, nothing to do, exiting."
+    {% else %}
+        mise d:docker:build {{ usage_app_name }}
+        mise d:kind:load:image {{ env.DRV_CONTAINER_REGISTRY }}/{{ env.DRV_VERTICAL_ID }}/{{ env.DRV_SYSTEM }}/images/{{ usage_app_name }}:latest
+
+        values_file="{{ env.MISE_PROJECT_ROOT }}{{ env.PATH_SEPARATOR }}infrastructure{{ env.PATH_SEPARATOR }}stages{{ env.PATH_SEPARATOR }}local{{ env.PATH_SEPARATOR }}values.yaml"
+        if [ ! -f "$values_file" ]; then
+          echo "No values file at $values_file, skipping rollout restarts."
+          exit 0
+        fi
+
+        app_names=$(yq -r '.drive.apps | to_entries[] | select(.value.sourceImage == "{{ usage_app_name }}" or .key == "{{ usage_app_name }}") | .key' "$values_file")
+        if [ -z "$app_names" ]; then
+          echo "No apps reference {{ usage_app_name }} in $values_file, skipping rollout restarts."
+          exit 0
+        fi
+
+        for app_name in $app_names; do
+          kubectl rollout restart "deployment/${app_name}" -n "{{ env.DRV_LOCAL_NAMESPACE }}"
+        done
+    {% endif %}
+'''
