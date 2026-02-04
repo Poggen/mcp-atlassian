@@ -3,21 +3,21 @@
 # MCP clients discover OAuth via the `WWW-Authenticate: ... resource_metadata=...`
 # URL. That URL is derived from the protected resource URL by inserting
 # `/.well-known/oauth-protected-resource` between the host and the resource path
-# (e.g. `https://host/mcp-atlassian/mcp` -> `https://host/.well-known/oauth-protected-resource/mcp-atlassian/mcp`).
+# (e.g. `https://host/mcp-jira/mcp` -> `https://host/.well-known/oauth-protected-resource/mcp-jira/mcp`).
 #
 # Since the MCP server itself is mounted behind a gateway path prefix
-# (`/mcp-atlassian/*` -> `/*`), we need an explicit HTTPRoute for the root
+# (`/mcp-jira/*` -> `/*`), we need an explicit HTTPRoute for the root
 # `/.well-known/oauth-protected-resource/...` paths so clients like ChatGPT can
 # fetch the discovery document.
 
-{{- $appDetails := dict "tag" (index (index .Values.drive.apps "mcp-atlassian") "tag") -}}
+{{- $appDetails := dict "tag" (index (index .Values.drive.apps "mcp-jira") "tag") -}}
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
 metadata:
-  name: mcp-atlassian-oauth-protected-resource-public
+  name: mcp-jira-oauth-protected-resource-public
   labels:
-    {{- include "drive-service-infra.appLabels" (dict "appName" "mcp-atlassian" "appDetails" $appDetails "context" .) | nindent 4 }}
+    {{- include "drive-service-infra.appLabels" (dict "appName" "mcp-jira" "appDetails" $appDetails "context" .) | nindent 4 }}
 spec:
   hostnames:
     - {{ .Values.drive.systemName }}.public.{{ .Values.drive.stageName }}.{{ .Values.drive.verticalId }}.{{ .Values.drive.domain.default }}
@@ -29,24 +29,24 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /.well-known/oauth-protected-resource/mcp-atlassian/mcp
+            value: /.well-known/oauth-protected-resource/mcp-jira/mcp
       backendRefs:
-        - name: mcp-atlassian
+        - name: mcp-jira
           port: 80
     - matches:
         - path:
             type: PathPrefix
-            value: /.well-known/oauth-protected-resource/mcp-atlassian-confluence/mcp
+            value: /.well-known/oauth-protected-resource/mcp-confluence/mcp
       backendRefs:
-        - name: mcp-atlassian-confluence
+        - name: mcp-confluence
           port: 80
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
 metadata:
-  name: mcp-atlassian-oauth-protected-resource-gated
+  name: mcp-jira-oauth-protected-resource-gated
   labels:
-    {{- include "drive-service-infra.appLabels" (dict "appName" "mcp-atlassian" "appDetails" $appDetails "context" .) | nindent 4 }}
+    {{- include "drive-service-infra.appLabels" (dict "appName" "mcp-jira" "appDetails" $appDetails "context" .) | nindent 4 }}
 spec:
   hostnames:
     - {{ .Values.drive.systemName }}.gated.{{ .Values.drive.stageName }}.{{ .Values.drive.verticalId }}.{{ .Values.drive.domain.default }}
@@ -58,14 +58,14 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /.well-known/oauth-protected-resource/mcp-atlassian/mcp
+            value: /.well-known/oauth-protected-resource/mcp-jira/mcp
       backendRefs:
-        - name: mcp-atlassian
+        - name: mcp-jira
           port: 80
     - matches:
         - path:
             type: PathPrefix
-            value: /.well-known/oauth-protected-resource/mcp-atlassian-confluence/mcp
+            value: /.well-known/oauth-protected-resource/mcp-confluence/mcp
       backendRefs:
-        - name: mcp-atlassian-confluence
+        - name: mcp-confluence
           port: 80

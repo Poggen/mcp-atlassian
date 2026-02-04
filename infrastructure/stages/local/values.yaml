@@ -29,7 +29,8 @@ drive:
   secrets: []
 
   apps:
-    mcp-atlassian:
+    mcp-jira:
+      sourceImage: mcp-atlassian
       tag: latest
       replicaCount: 1
       profile: generic
@@ -84,7 +85,7 @@ drive:
         liveness: /healthz
         readiness: /healthz
 
-    mcp-atlassian-confluence:
+    mcp-confluence:
       sourceImage: mcp-atlassian
       tag: latest
       replicaCount: 1
