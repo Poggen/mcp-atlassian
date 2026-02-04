@@ -18,12 +18,16 @@ metadata:
       }
     drive.wirelesscar.com/delete-after: disabled
   links:
-    - url: https://argocd.gated.euw1.d1db59e.drive-platform.com/applications?search=mcp-atlassian
-      title: ArgoCD
+    - url: https://argocd.gated.euw1.d1db59e.drive-platform.com/applications?search=mcp-jira
+      title: ArgoCD (Jira)
+    - url: https://argocd.gated.euw1.d1db59e.drive-platform.com/applications?search=mcp-confluence
+      title: ArgoCD (Confluence)
     - url: https://kargo.gated.euw1.d1db59e.drive-platform.com/project/mcp-atlassian
       title: Kargo
-    - url: https://grafana.gated.euw1.d1db59e.drive-platform.com/d/service-overview/service-overview?orgId=1&var-app=mcp-atlassian.myapp
-      title: Grafana
+    - url: https://grafana.gated.euw1.d1db59e.drive-platform.com/d/service-overview/service-overview?orgId=1&var-app=mcp-jira.myapp
+      title: Grafana (Jira)
+    - url: https://grafana.gated.euw1.d1db59e.drive-platform.com/d/service-overview/service-overview?orgId=1&var-app=mcp-confluence.myapp
+      title: Grafana (Confluence)
     - url: https://github.com/WDP-EarlyBirds/mcp-atlassian/releases
       title: Release Notes
 
