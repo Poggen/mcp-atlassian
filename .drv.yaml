@@ -1,8 +1,7 @@
 v1alpha1:
   team: U-GitHub-WDP-EarlyBirds
   apps:
-    - mcp-jira
-    - mcp-confluence
+    - mcp-atlassian
 
   driveInfra:
     majorVersion: 1
