@@ -38,17 +38,19 @@ drive:
         enabled: true
         permissions:
           pub:
-            - "$KV.>"
-            - "$kv.>"
-            - "$JS.API.>"
-            - "_INBOX.>"
-            - "mcp.client.>"
+            allow:
+              - "$KV.>"
+              - "$kv.>"
+              - "$JS.API.>"
+              - "_INBOX.>"
+              - "mcp.client.>"
           sub:
-            - "$KV.>"
-            - "$kv.>"
-            - "$JS.API.>"
-            - "_INBOX.>"
-            - "mcp.client.>"
+            allow:
+              - "$KV.>"
+              - "$kv.>"
+              - "$JS.API.>"
+              - "_INBOX.>"
+              - "mcp.client.>"
       env:
         TRANSPORT: streamable-http
         PORT: "3000"
@@ -82,6 +84,61 @@ drive:
         liveness: /healthz
         readiness: /healthz
 
+    mcp-atlassian-confluence:
+      sourceImage: mcp-atlassian
+      tag: latest
+      replicaCount: 1
+      profile: generic
+      db: false
+      nats:
+        enabled: true
+        permissions:
+          pub:
+            allow:
+              - "$KV.>"
+              - "$kv.>"
+              - "$JS.API.>"
+              - "_INBOX.>"
+              - "mcp.client.>"
+          sub:
+            allow:
+              - "$KV.>"
+              - "$kv.>"
+              - "$JS.API.>"
+              - "_INBOX.>"
+              - "mcp.client.>"
+      env:
+        TRANSPORT: streamable-http
+        PORT: "3000"
+        HOST: 0.0.0.0
+        MCP_PATH: /mcp
+        MCP_LOGGING_STDOUT: "true"
+        READ_ONLY_MODE: "true"
+        CONFLUENCE_URL: "https://wcar-confluence-test.riada.se"
+        STORAGE_BACKEND: jetstream
+        STORAGE_BUCKET_PREFIX: mcp-confluence-client-
+        STORAGE_DEFAULT_COLLECTION: registrations
+        JWT_SIGNING_KEY: "dev-jwt-signing-key-change-me"
+        STORAGE_ENCRYPTION_KEY: "f8XkS6zWIZ2shB_QhSiaY9hjiawR1C0tqJg8PJo3lqA="
+        ATLASSIAN_OAUTH_SCOPE: "READ"
+        ATLASSIAN_OAUTH_ALLOWED_CLIENT_REDIRECT_URIS: "http://localhost:*,http://127.0.0.1:*"
+        ATLASSIAN_OAUTH_ALLOWED_GRANT_TYPES: "authorization_code,refresh_token"
+        ATLASSIAN_OAUTH_REQUIRE_CONSENT: "false"
+        ATLASSIAN_OAUTH_INSTANCE_TYPE: "datacenter"
+        ATLASSIAN_OAUTH_INSTANCE_URL: "https://wcar-confluence-test.riada.se"
+        ATLASSIAN_OAUTH_REDIRECT_URI: "http://localhost:3000/callback"
+        ATLASSIAN_OAUTH_ENABLE: "true"
+      secretEnv:
+        ATLASSIAN_OAUTH_CLIENT_ID:
+          secretName: mcp-atlassian-oauth
+          secretKey: CONFLUENCE_OAUTH_CLIENT_ID
+        ATLASSIAN_OAUTH_CLIENT_SECRET:
+          secretName: mcp-atlassian-oauth
+          secretKey: CONFLUENCE_OAUTH_CLIENT_SECRET
+      probes:
+        liveness: /healthz
+        readiness: /healthz
+
   appDefaults:
     resources:
       requests:
@@ -90,57 +147,3 @@ drive:
       limits:
         cpu: "200m"
         memory: "128Mi"
-
-
-  confluence:
-    enabled: true
-    tag: latest
-    replicaCount: 1
-    profile: generic
-    db: false
-    nats:
-      enabled: true
-      permissions:
-        pub:
-          - "$KV.>"
-          - "$kv.>"
-          - "$JS.API.>"
-          - "_INBOX.>"
-          - "mcp.client.>"
-        sub:
-          - "$KV.>"
-          - "$kv.>"
-          - "$JS.API.>"
-          - "_INBOX.>"
-          - "mcp.client.>"
-    env:
-      TRANSPORT: streamable-http
-      PORT: "3000"
-      HOST: 0.0.0.0
-      MCP_PATH: /mcp
-      MCP_LOGGING_STDOUT: "true"
-      READ_ONLY_MODE: "true"
-      CONFLUENCE_URL: "https://wcar-confluence-test.riada.se"
-      STORAGE_BACKEND: jetstream
-      STORAGE_BUCKET_PREFIX: mcp-confluence-client-
-      STORAGE_DEFAULT_COLLECTION: registrations
-      JWT_SIGNING_KEY: "dev-jwt-signing-key-change-me"
-      STORAGE_ENCRYPTION_KEY: "f8XkS6zWIZ2shB_QhSiaY9hjiawR1C0tqJg8PJo3lqA="
-      ATLASSIAN_OAUTH_SCOPE: "READ"
-      ATLASSIAN_OAUTH_ALLOWED_CLIENT_REDIRECT_URIS: "http://localhost:*,http://127.0.0.1:*"
-      ATLASSIAN_OAUTH_ALLOWED_GRANT_TYPES: "authorization_code,refresh_token"
-      ATLASSIAN_OAUTH_REQUIRE_CONSENT: "false"
-      ATLASSIAN_OAUTH_INSTANCE_TYPE: "datacenter"
-      ATLASSIAN_OAUTH_INSTANCE_URL: "https://wcar-confluence-test.riada.se"
-      ATLASSIAN_OAUTH_REDIRECT_URI: "http://localhost:3000/callback"
-      ATLASSIAN_OAUTH_ENABLE: "true"
-    secretEnv:
-      ATLASSIAN_OAUTH_CLIENT_ID:
-        secretName: mcp-atlassian-oauth
-        secretKey: CONFLUENCE_OAUTH_CLIENT_ID
-      ATLASSIAN_OAUTH_CLIENT_SECRET:
-        secretName: mcp-atlassian-oauth
-        secretKey: CONFLUENCE_OAUTH_CLIENT_SECRET
-    probes:
-      liveness: /healthz
-      readiness: /healthz
