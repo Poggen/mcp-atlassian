@@ -6,6 +6,7 @@ v1alpha1:
   driveInfra:
     majorVersion: 1
     enabled: true
+    preReleases: true
 
   stages:
     dev-euw1:
