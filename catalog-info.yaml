@@ -9,9 +9,12 @@ metadata:
     github.com/project-slug: WDP-EarlyBirds/mcp-atlassian
     backstage.io/environment-urls: |
       {
-        "Development": "https://mcp-atlassian.gated.dev-euw1.d1db59e.drive-platform.com",
-        "Staging": "https://mcp-atlassian.gated.stg-euw1.d1db59e.drive-platform.com",
-        "Production": "https://mcp-atlassian.gated.prd-euw1.d1db59e.drive-platform.com"
+        "Development (Jira)": "https://mcp-atlassian.gated.dev-euw1.d1db59e.drive-platform.com/mcp-jira",
+        "Development (Confluence)": "https://mcp-atlassian.gated.dev-euw1.d1db59e.drive-platform.com/mcp-confluence",
+        "Staging (Jira)": "https://mcp-atlassian.gated.stg-euw1.d1db59e.drive-platform.com/mcp-jira",
+        "Staging (Confluence)": "https://mcp-atlassian.gated.stg-euw1.d1db59e.drive-platform.com/mcp-confluence",
+        "Production (Jira)": "https://mcp-atlassian.gated.prd-euw1.d1db59e.drive-platform.com/mcp-jira",
+        "Production (Confluence)": "https://mcp-atlassian.gated.prd-euw1.d1db59e.drive-platform.com/mcp-confluence"
       }
     drive.wirelesscar.com/delete-after: disabled
   links:
@@ -19,8 +22,10 @@ metadata:
       title: ArgoCD
     - url: https://kargo.gated.euw1.d1db59e.drive-platform.com/project/mcp-atlassian
       title: Kargo
-    - url: https://grafana.gated.euw1.d1db59e.drive-platform.com/d/service-overview/service-overview?orgId=1&var-app=mcp-atlassian.myapp
-      title: Grafana
+    - url: https://grafana.gated.euw1.d1db59e.drive-platform.com/d/service-overview/service-overview?orgId=1&var-app=mcp-jira.myapp
+      title: Grafana (Jira)
+    - url: https://grafana.gated.euw1.d1db59e.drive-platform.com/d/service-overview/service-overview?orgId=1&var-app=mcp-confluence.myapp
+      title: Grafana (Confluence)
     - url: https://github.com/WDP-EarlyBirds/mcp-atlassian/releases
       title: Release Notes
 

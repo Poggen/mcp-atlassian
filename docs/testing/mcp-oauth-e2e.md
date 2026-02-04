@@ -19,14 +19,14 @@ open -na "Google Chrome" --args --remote-debugging-port=9222 --user-data-dir=/tm
 Use the helper script:
 
 ```bash
-MCP_ENDPOINT="https://mcp-atlassian.public.dev-euw1.d1db59e.drive-platform.com/mcp-atlassian/mcp" \
+MCP_ENDPOINT="https://mcp-atlassian.public.dev-euw1.d1db59e.drive-platform.com/mcp-jira/mcp" \
   ./scripts/mcp-oauth-e2e.sh
 ```
 
 For Confluence:
 
 ```bash
-MCP_ENDPOINT="https://mcp-atlassian.public.dev-euw1.d1db59e.drive-platform.com/mcp-atlassian-confluence/mcp" \
+MCP_ENDPOINT="https://mcp-atlassian.public.dev-euw1.d1db59e.drive-platform.com/mcp-confluence/mcp" \
   ./scripts/mcp-oauth-e2e.sh
 ```
 
@@ -85,7 +85,7 @@ agent-browser --cdp 9222 get text body | rg -n "reloadUrl" -m 1
 Jira JQL search:
 
 ```bash
-MCP_ENDPOINT="https://mcp-atlassian.public.dev-euw1.d1db59e.drive-platform.com/mcp-atlassian/mcp" \
+MCP_ENDPOINT="https://mcp-atlassian.public.dev-euw1.d1db59e.drive-platform.com/mcp-jira/mcp" \
   TOOL_NAME=search \
   TOOL_QUERY='project = WCAR ORDER BY updated DESC' \
   ./scripts/mcp-oauth-e2e.sh
@@ -94,7 +94,7 @@ MCP_ENDPOINT="https://mcp-atlassian.public.dev-euw1.d1db59e.drive-platform.com/m
 Jira fetch:
 
 ```bash
-MCP_ENDPOINT="https://mcp-atlassian.public.dev-euw1.d1db59e.drive-platform.com/mcp-atlassian/mcp" \
+MCP_ENDPOINT="https://mcp-atlassian.public.dev-euw1.d1db59e.drive-platform.com/mcp-jira/mcp" \
   TOOL_NAME=fetch \
   TOOL_ARGS_JSON='{"id":"jira:WCAR-81881"}' \
   ./scripts/mcp-oauth-e2e.sh
@@ -103,7 +103,7 @@ MCP_ENDPOINT="https://mcp-atlassian.public.dev-euw1.d1db59e.drive-platform.com/m
 Confluence CQL search:
 
 ```bash
-MCP_ENDPOINT="https://mcp-atlassian.public.dev-euw1.d1db59e.drive-platform.com/mcp-atlassian-confluence/mcp" \
+MCP_ENDPOINT="https://mcp-atlassian.public.dev-euw1.d1db59e.drive-platform.com/mcp-confluence/mcp" \
   TOOL_NAME=search \
   TOOL_QUERY='type=page AND text ~ "onboarding"' \
   ./scripts/mcp-oauth-e2e.sh
@@ -112,7 +112,7 @@ MCP_ENDPOINT="https://mcp-atlassian.public.dev-euw1.d1db59e.drive-platform.com/m
 Confluence fetch:
 
 ```bash
-MCP_ENDPOINT="https://mcp-atlassian.public.dev-euw1.d1db59e.drive-platform.com/mcp-atlassian-confluence/mcp" \
+MCP_ENDPOINT="https://mcp-atlassian.public.dev-euw1.d1db59e.drive-platform.com/mcp-confluence/mcp" \
   TOOL_NAME=fetch \
   TOOL_ARGS_JSON='{"id":"confluence:44593488"}' \
   ./scripts/mcp-oauth-e2e.sh
