@@ -20,6 +20,15 @@ This is a fork of [sooperset/mcp-atlassian](https://github.com/sooperset/mcp-atl
     - On tool calls, verify our token → load upstream token → call Jira/Confluence
 - OpenTelemetry tracing (OTLP/HTTP) + Cilium NetworkPolicy config so we can derive minimal egress allow-lists before Drive enforces network policies.
 
+## Temporary sourceImage workaround
+
+Until Drive has native `sourceImage` reuse support for this setup, this
+repository uses wrapper images (`mcp-jira`, `mcp-confluence`) that `FROM` the
+`mcp-atlassian` base image.
+
+Operational details, release flow, and local developer workflow are documented
+in [`docs/source-image-temporary-workaround.md`](docs/source-image-temporary-workaround.md).
+
 ```mermaid
   sequenceDiagram
     participant C as MCP Client (ChatGPT/Claude)

@@ -161,12 +161,49 @@ run = '''
         {% set usage_app_name = cwd | basename | as_str %}
     {% endif %}
 
+    registry_image_prefix="{{ env.DRV_CONTAINER_REGISTRY }}/{{ env.DRV_VERTICAL_ID }}/{{ env.DRV_SYSTEM }}/images"
+    local_base_ref="${registry_image_prefix}/mcp-atlassian:latest"
+    wrapper_apps="mcp-jira mcp-confluence"
+
+    build_wrapper_from_local_base() {
+      local wrapper_app="$1"
+      local wrapper_context="{{ env.MISE_PROJECT_ROOT }}{{ env.PATH_SEPARATOR }}apps{{ env.PATH_SEPARATOR }}${wrapper_app}"
+      local wrapper_image="${registry_image_prefix}/${wrapper_app}:latest"
+
+      if ! docker image inspect "${local_base_ref}" >/dev/null 2>&1; then
+        echo "Missing local base image ${local_base_ref}. Run 'mise d:app:update mcp-atlassian' first."
+        return 1
+      fi
+
+      if [ ! -f "${wrapper_context}/Dockerfile" ]; then
+        echo "No Dockerfile found in ${wrapper_context}, skipping ${wrapper_app}."
+        return 0
+      fi
+
+      docker build \
+        -t "${wrapper_image}" \
+        --build-arg "BASE_IMAGE_REF=${local_base_ref}" \
+        "${wrapper_context}"
+
+      mise d:kind:load:image "${wrapper_image}"
+    }
+
     {% set docker_path = env.MISE_PROJECT_ROOT ~ env.PATH_SEPARATOR ~ "apps" ~ env.PATH_SEPARATOR ~ usage_app_name ~ env.PATH_SEPARATOR ~ "Dockerfile"%}
     {% if not docker_path is exists %}
         echo "No Dockerfile found in {{ docker_path }}, nothing to do, exiting."
     {% else %}
-        mise d:docker:build {{ usage_app_name }}
-        mise d:kind:load:image {{ env.DRV_CONTAINER_REGISTRY }}/{{ env.DRV_VERTICAL_ID }}/{{ env.DRV_SYSTEM }}/images/{{ usage_app_name }}:latest
+        if [ "{{ usage_app_name }}" = "mcp-jira" ] || [ "{{ usage_app_name }}" = "mcp-confluence" ]; then
+          build_wrapper_from_local_base "{{ usage_app_name }}"
+        else
+          mise d:docker:build {{ usage_app_name }}
+          mise d:kind:load:image "${registry_image_prefix}/{{ usage_app_name }}:latest"
+
+          if [ "{{ usage_app_name }}" = "mcp-atlassian" ]; then
+            for wrapper_app in $wrapper_apps; do
+              build_wrapper_from_local_base "${wrapper_app}"
+            done
+          fi
+        fi
 
         values_file="{{ env.MISE_PROJECT_ROOT }}{{ env.PATH_SEPARATOR }}infrastructure{{ env.PATH_SEPARATOR }}stages{{ env.PATH_SEPARATOR }}local{{ env.PATH_SEPARATOR }}values.yaml"
         if [ ! -f "$values_file" ]; then
@@ -175,6 +212,11 @@ run = '''
         fi
 
         app_names=$(yq -r '.drive.apps | to_entries[] | select(.value.sourceImage == "{{ usage_app_name }}" or .key == "{{ usage_app_name }}") | .key' "$values_file")
+        if [ "{{ usage_app_name }}" = "mcp-atlassian" ]; then
+          wrapper_local_apps=$(yq -r '.drive.apps | keys[] | select(. == "mcp-jira" or . == "mcp-confluence")' "$values_file")
+          app_names=$(printf "%s\n%s\n" "$app_names" "$wrapper_local_apps" | awk 'NF' | sort -u)
+        fi
+
         if [ -z "$app_names" ]; then
           echo "No apps reference {{ usage_app_name }} in $values_file, skipping rollout restarts."
           exit 0
